@@ -39,7 +39,7 @@ public class CapeManager {
     }
 
     public static ResourceLocation getCape(AbstractClientPlayer player) {
-        if (isLocalPlayer(player) && selectedCape != null) {
+        if (selectedCape != null && isLocalPlayer(player)) {
             return selectedCape.resource;
         }
         return null;

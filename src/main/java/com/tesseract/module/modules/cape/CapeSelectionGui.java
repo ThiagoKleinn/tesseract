@@ -76,9 +76,11 @@ public class CapeSelectionGui extends GuiScreen {
 
         // Armazena a capa original e define a selecionada para o renderizador
         Cape originalCape = CapeManager.getSelectedCape();
-        // Precisamos temporariamente mudar o que o CapeManager retorna para o mc.thePlayer
-        // Mas o CapeManager.getCape(player) usa a selectedCape estática.
         CapeManager.selectCape(cape);
+
+        // Força a skin a mostrar a capa no preview
+        boolean originalCapeSetting = mc.gameSettings.getModelParts().contains(net.minecraft.entity.player.EnumPlayerModelParts.CAPE);
+        mc.gameSettings.setModelPartEnabled(net.minecraft.entity.player.EnumPlayerModelParts.CAPE, true);
 
         // Força remover invisibilidade durante o preview
         boolean wasInvisible = mc.thePlayer.isInvisible();
@@ -126,6 +128,9 @@ public class CapeSelectionGui extends GuiScreen {
         mc.thePlayer.prevRotationYawHead = savedPrevYawHead;
 
         mc.thePlayer.setInvisible(wasInvisible);
+
+        // Restaura a configuração de capa
+        mc.gameSettings.setModelPartEnabled(net.minecraft.entity.player.EnumPlayerModelParts.CAPE, originalCapeSetting);
 
         // Restaura a capa original no manager
         if (originalCape != null) {

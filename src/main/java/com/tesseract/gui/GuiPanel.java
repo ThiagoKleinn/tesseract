@@ -1,6 +1,8 @@
 package com.tesseract.gui;
 
 import com.tesseract.module.BaseModule;
+import com.tesseract.module.modules.CapeModule;
+import com.tesseract.module.modules.cape.CapeSelectionGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.renderer.GlStateManager;
@@ -134,8 +136,10 @@ public class GuiPanel {
                 COLOR_MODULE_TEXT
         );
 
-        // Toggle
-        drawToggle(x + WIDTH - PADDING - 24, my + MODULE_H / 2 - 5, module.isEnabled(), isCosmetics);
+        // Toggle (não desenha para o módulo de capas)
+        if (!(module instanceof CapeModule)) {
+            drawToggle(x + WIDTH - PADDING - 24, my + MODULE_H / 2 - 5, module.isEnabled(), isCosmetics);
+        }
     }
 
     /**
@@ -173,12 +177,17 @@ public class GuiPanel {
             return;
         }
 
-        // Clique em módulo → toggle
+        // Clique em módulo
         if (button == 0) {
             for (int i = 0; i < modules.size(); i++) {
+                BaseModule module = modules.get(i);
                 int my = y + HEADER_H + i * MODULE_H;
                 if (mouseX >= x && mouseX <= x + WIDTH && mouseY >= my && mouseY <= my + MODULE_H) {
-                    modules.get(i).toggle();
+                    if (module instanceof CapeModule) {
+                        Minecraft.getMinecraft().displayGuiScreen(new CapeSelectionGui());
+                    } else {
+                        module.toggle();
+                    }
                     return;
                 }
             }

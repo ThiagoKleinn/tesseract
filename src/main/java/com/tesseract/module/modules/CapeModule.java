@@ -82,20 +82,9 @@ public class CapeModule extends BaseModule {
             injectCapeLayer(mc.getRenderManager());
             layerInjected = true;
         }
-    }
 
-    /**
-     * Tick do cliente: abre a GUI quando a keybind é pressionada.
-     * Usamos ClientTickEvent para checar input fora do render.
-     */
-    @SubscribeEvent
-    public void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-        if (mc.thePlayer == null) return;
-        if (mc.currentScreen != null) return; // não abre sobre outra GUI
-
-        if (Keyboard.isKeyDown(getKeybind())) {
-            // Abre a GUI no próximo tick para evitar conflito com o estado do teclado
+        // Abre a GUI no próximo tick para evitar conflito com o estado do teclado
+        if (mc.currentScreen == null && Keyboard.isKeyDown(getKeybind())) {
             mc.addScheduledTask(() -> mc.displayGuiScreen(new CapeSelectionGui()));
         }
     }

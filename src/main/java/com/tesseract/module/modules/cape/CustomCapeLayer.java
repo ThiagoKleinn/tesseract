@@ -23,7 +23,16 @@ public class CustomCapeLayer implements LayerRenderer<AbstractClientPlayer> {
                               float partialTicks, float ageInTicks, float netHeadYaw, float headPitch, float scale) {
 
         if (!player.hasPlayerInfo()) return;
-        if (!player.isWearing(EnumPlayerModelParts.CAPE)) return;
+        
+        if (!player.isWearing(EnumPlayerModelParts.CAPE)) {
+             // Força a exibição da capa se for o jogador local
+             if (player.getUniqueID().equals(net.minecraft.client.Minecraft.getMinecraft().thePlayer.getUniqueID())) {
+                 // Continuar
+             } else {
+                 return;
+             }
+        }
+        
         if (!CapeManager.hasCape(player)) return;
 
         ResourceLocation capeTexture = CapeManager.getCape(player);
