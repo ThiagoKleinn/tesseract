@@ -1,11 +1,7 @@
 package com.tesseract.core;
 
 import com.tesseract.module.BaseModule;
-import com.tesseract.module.modules.ArmorHUDModule;
-import com.tesseract.module.modules.CapeModule;
-import com.tesseract.module.modules.FPSModule;
-import com.tesseract.module.modules.KeystrokesModule;
-import com.tesseract.module.modules.ZoomModule;
+import com.tesseract.module.modules.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +23,7 @@ public class ModuleManager {
         register(new ArmorHUDModule());
         register(new KeystrokesModule());
         register(new ZoomModule());
+        register(new ClickGuiModule());
 
         // --- COSMETICS ---
         register(new CapeModule());
