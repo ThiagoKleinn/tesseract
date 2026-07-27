@@ -14,24 +14,31 @@ public class CapeManager {
     private static Cape selectedCape = null;
 
     public static void init() {
-        // Só registra os nomes, sem carregar texturas
-        AVAILABLE_CAPES.add(new Cape("Migrator", "assets/customcapes/textures/capes/migrator.png", false));
-        AVAILABLE_CAPES.add(new Cape("Pan",    "assets/customcapes/textures/capes/pan.png", false));
-        AVAILABLE_CAPES.add(new Cape("15th Anniversary",  "assets/customcapes/textures/capes/15thanniversary.png", false));
-        AVAILABLE_CAPES.add(new Cape("Common",  "assets/customcapes/textures/capes/common.png", false));
-        AVAILABLE_CAPES.add(new Cape("Vanilla",  "assets/customcapes/textures/capes/vanilla.png", false));
-        AVAILABLE_CAPES.add(new Cape("Cherry Blossom",  "assets/customcapes/textures/capes/cherryblossom.png", false));
-        // Minecons
-        AVAILABLE_CAPES.add(new Cape("2011 Minecon",  "assets/customcapes/textures/capes/2011.png", false));
-        AVAILABLE_CAPES.add(new Cape("2012 Minecon",  "assets/customcapes/textures/capes/2012.png", false));
-        AVAILABLE_CAPES.add(new Cape("2013 Minecon",  "assets/customcapes/textures/capes/2013.png", false));
-        AVAILABLE_CAPES.add(new Cape("2015 Minecon",  "assets/customcapes/textures/capes/2015.png", false));
-        AVAILABLE_CAPES.add(new Cape("2016 Minecon",  "assets/customcapes/textures/capes/2016.png", false));
-        // Minecon Live 2019
-        AVAILABLE_CAPES.add(new Cape("Founders",  "assets/customcapes/textures/capes/founders.png", false));
+        register("Migrator",         "migrator");
+        register("Pan",              "pan");
+        register("15th Anniversary", "15thanniversary");
+        register("Common",           "common");
+        register("Vanilla",          "vanilla");
+        register("Cherry Blossom",   "cherryblossom");
+        register("2011 Minecon",     "2011");
+        register("2012 Minecon",     "2012");
+        register("2013 Minecon",     "2013");
+        register("2015 Minecon",     "2015");
+        register("2016 Minecon",     "2016");
+        register("Founders",         "founders");
         loadConfig();
     }
 
+    /**
+     * Registra uma cape usando o filename do PNG (sem extensão).
+     * O texturePath fica: assets/customcapes/textures/capes/<filename>.png
+     */
+    private static void register(String displayName, String filename) {
+        String texturePath = "assets/customcapes/textures/capes/" + filename + ".png";
+        AVAILABLE_CAPES.add(new Cape(displayName, texturePath, false));
+    }
+
+    /** Deve ser chamado após o TextureManager estar pronto (ex: pós-login). */
     public static void loadTextures() {
         for (Cape cape : AVAILABLE_CAPES) {
             cape.loadTexture();
@@ -72,9 +79,9 @@ public class CapeManager {
     private static void saveConfig(String name) {
         try {
             File file = new File(Minecraft.getMinecraft().mcDataDir, "customcapes.txt");
-            PrintWriter pw = new PrintWriter(new FileWriter(file));
-            pw.println(name);
-            pw.close();
+            try (PrintWriter pw = new PrintWriter(new FileWriter(file))) {
+                pw.println(name);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -85,9 +92,10 @@ public class CapeManager {
             File file = new File(Minecraft.getMinecraft().mcDataDir, "customcapes.txt");
             if (!file.exists()) return;
 
-            BufferedReader br = new BufferedReader(new FileReader(file));
-            String name = br.readLine();
-            br.close();
+            String name;
+            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                name = br.readLine();
+            }
 
             if (name != null && !name.isEmpty()) {
                 for (Cape cape : AVAILABLE_CAPES) {

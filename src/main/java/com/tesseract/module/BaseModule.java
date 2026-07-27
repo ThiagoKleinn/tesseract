@@ -3,23 +3,11 @@ package com.tesseract.module;
 import com.tesseract.Tesseract;
 import net.minecraft.client.Minecraft;
 
-/**
- * Classe base para todos os módulos do Tesseract.
- * Todo módulo DEVE extender esta classe.
- *
- * Exemplo mínimo:
- *   public class ZoomModule extends BaseModule {
- *       public ZoomModule() { super("Zoom", "Permite dar zoom", Category.UTIL, Keyboard.KEY_Z); }
- *
- *       @Override public void onEnable() { ... }
- *       @Override public void onDisable() { ... }
- *   }
- */
 public abstract class BaseModule {
 
     public enum Category {
-        MODS,       // Todos os módulos utilitários e visuais (legit)
-        COSMETICS,  // Capas, cosméticos...
+        MODS,
+        COSMETICS,
     }
 
     // -------------------------------------------------------------------------
@@ -30,9 +18,14 @@ public abstract class BaseModule {
     private final String description;
     private final Category category;
 
-    private int keybind;       // código da tecla (Keyboard.KEY_*), -1 = sem bind
+    private int keybind;
     private boolean enabled;
-    private boolean registered; // está registrado no EventBus?
+    private boolean registered;
+
+    // Sub-painel de bind aberto neste módulo?
+    private boolean bindPanelOpen = false;
+    // Aguardando tecla para registrar?
+    private boolean listeningForKey = false;
 
     // -------------------------------------------------------------------------
 
@@ -50,16 +43,11 @@ public abstract class BaseModule {
     }
 
     // -------------------------------------------------------------------------
-    // Métodos que os módulos filhos podem (ou devem) sobrescrever
 
-    /** Chamado quando o módulo é ativado. */
-    public void onEnable() {}
-
-    /** Chamado quando o módulo é desativado. */
+    public void onEnable()  {}
     public void onDisable() {}
 
     // -------------------------------------------------------------------------
-    // Toggle
 
     public void toggle() {
         setEnabled(!enabled);
@@ -84,7 +72,37 @@ public abstract class BaseModule {
     }
 
     // -------------------------------------------------------------------------
-    // Getters / Setters
+    // Bind panel
+
+    /** Sobrescreva e retorne true nos módulos que aceitam keybind configurável. */
+    public boolean isBindable() { return false; }
+
+    public boolean isBindPanelOpen()    { return bindPanelOpen; }
+    public boolean isListeningForKey()  { return listeningForKey; }
+
+    public void openBindPanel() {
+        bindPanelOpen   = true;
+        listeningForKey = false;
+    }
+
+    public void closeBindPanel() {
+        bindPanelOpen   = false;
+        listeningForKey = false;
+    }
+
+    public void startListening() {
+        listeningForKey = true;
+    }
+
+    /** Chamado pelo GuiPanel quando uma tecla é pressionada no modo listening. */
+    public void onKeyReceived(int keyCode) {
+        if (!listeningForKey) return;
+        setKeybind(keyCode);
+        listeningForKey = false;
+        bindPanelOpen   = false;
+    }
+
+    // -------------------------------------------------------------------------
 
     public String getName()        { return name; }
     public String getDescription() { return description; }

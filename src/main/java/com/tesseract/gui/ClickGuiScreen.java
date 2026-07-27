@@ -178,12 +178,15 @@ public class ClickGuiScreen extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        // Repassa para os painéis primeiro (bind listening tem prioridade)
+        for (GuiPanel panel : panels) {
+            if (panel.keyTyped(keyCode)) return; // tecla consumida
+        }
+
         if (keyCode == Keyboard.KEY_RSHIFT || keyCode == Keyboard.KEY_ESCAPE) {
             mc.displayGuiScreen(null);
             mc.setIngameFocus();
-            return;
         }
-        super.keyTyped(typedChar, keyCode);
     }
 
     // -------------------------------------------------------------------------

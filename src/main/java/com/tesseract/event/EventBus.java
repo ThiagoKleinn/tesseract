@@ -43,9 +43,13 @@ public class EventBus {
      */
     public void post(Object event) {
         List<EventListener> list = listeners.get(event.getClass());
-        if (list == null) return;
+        if (list == null || list.isEmpty()) return;
 
-        for (EventListener listener : list) {
+        // Cria uma cópia da lista para evitar ConcurrentModificationException
+        // caso um listener chame unregister() durante a iteração.
+        List<EventListener> safeList = new ArrayList<>(list);
+
+        for (EventListener listener : safeList) {
             try {
                 listener.invoke(event);
             } catch (Exception e) {
