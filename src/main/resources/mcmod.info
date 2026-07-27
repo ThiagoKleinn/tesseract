@@ -1,0 +1,13 @@
+[{
+  "modid": "tesseract",
+  "name": "Tesseract",
+  "description": "Client customizado para Minecraft 1.8.9",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "authorList": ["ThiagoKlein"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}]
