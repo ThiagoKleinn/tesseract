@@ -1,8 +1,9 @@
 package com.tesseract.core;
 
 import com.tesseract.module.BaseModule;
-import com.tesseract.module.modules.FPSModule;
 import com.tesseract.module.modules.ArmorHUDModule;
+import com.tesseract.module.modules.CapeModule;
+import com.tesseract.module.modules.FPSModule;
 import com.tesseract.module.modules.KeystrokesModule;
 import com.tesseract.module.modules.ZoomModule;
 
@@ -26,6 +27,13 @@ public class ModuleManager {
         register(new ArmorHUDModule());
         register(new KeystrokesModule());
         register(new ZoomModule());
+
+        // --- COSMETICS ---
+        register(new CapeModule());
+
+        // Ativa o CapeModule por padrão, já que é cosmético passivo
+        // (o layer precisa estar injetado mesmo sem o usuário togglear)
+        getModule(CapeModule.class).setEnabled(true);
 
         System.out.println("{Tesseract} " + modules.size() + " módulos carregados.");
     }
