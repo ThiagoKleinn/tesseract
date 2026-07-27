@@ -26,23 +26,21 @@ public class CapeManager {
         register("2015 Minecon",     "2015");
         register("2016 Minecon",     "2016");
         register("Founders",         "founders");
-        loadConfig();
+        register("Default",          "default");
+        register("Fire",             "fire");
+        register("Galaxy",           "galaxy");
     }
 
-    /**
-     * Registra uma cape usando o filename do PNG (sem extensão).
-     * O texturePath fica: assets/customcapes/textures/capes/<filename>.png
-     */
     private static void register(String displayName, String filename) {
         String texturePath = "assets/customcapes/textures/capes/" + filename + ".png";
-        AVAILABLE_CAPES.add(new Cape(displayName, texturePath, false));
+        AVAILABLE_CAPES.add(new Cape(displayName, filename, texturePath, false));
     }
 
-    /** Deve ser chamado após o TextureManager estar pronto (ex: pós-login). */
     public static void loadTextures() {
         for (Cape cape : AVAILABLE_CAPES) {
             cape.loadTexture();
         }
+        loadConfig();
     }
 
     public static ResourceLocation getCape(AbstractClientPlayer player) {

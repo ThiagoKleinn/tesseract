@@ -48,15 +48,15 @@ public class CapeModule extends BaseModule {
 
     @Override
     public void onEnable() {
-        // Nada extra: o @SubscribeEvent só roda enquanto o módulo está registrado
-        // no EventBus, o que BaseModule já garante ao ativar.
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(this);
     }
 
     @Override
     public void onDisable() {
-        // Ao desativar, o layer já foi injetado e permanece — remover exigiria
-        // reiniciar o RenderManager, que não vale a pena. O layer checa
-        // CapeManager.hasCape() internamente e não renderiza nada se não houver capa.
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(this);
+        // Reseta os flags pra reinjetar se reativar
+        layerInjected = false;
+        capesLoaded   = false;
     }
 
     // -------------------------------------------------------------------------
@@ -79,8 +79,12 @@ public class CapeModule extends BaseModule {
 
         // Injeta o CustomCapeLayer nos dois skin types (default / slim)
         if (!layerInjected) {
-            injectCapeLayer(mc.getRenderManager());
-            layerInjected = true;
+            try {
+                injectCapeLayer(mc.getRenderManager());
+                layerInjected = true; // só marca se não lançou exceção
+            } catch (Exception e) {
+                e.printStackTrace(); // vai tentar de novo no próximo tick
+            }
         }
 
         // Abre a GUI no próximo tick para evitar conflito com o estado do teclado

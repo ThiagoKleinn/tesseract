@@ -14,21 +14,19 @@ public class Cape {
     public final ResourceLocation resource;
     private final String texturePath;
 
-    public Cape(String name, String texturePath, boolean loadNow) {
+    public Cape(String name, String filename, String texturePath, boolean loadNow) {
         this.name = name;
         this.texturePath = texturePath;
-        // domínio "customcapes", path "textures/capes/<name>" — alinha com assets/customcapes/...
         this.resource = new ResourceLocation("customcapes",
-                "textures/capes/" + name.toLowerCase().replace(" ", "_") + ".png");
+                "textures/capes/" + filename + ".png");
         if (loadNow) loadTexture();
     }
 
     public void loadTexture() {
         try {
-            // texturePath já é relativo ao classpath: "assets/customcapes/textures/capes/xxx.png"
             InputStream is = Cape.class.getClassLoader().getResourceAsStream(texturePath);
             if (is == null) {
-                System.err.println("[Cape] Texture not found on classpath: " + texturePath);
+                System.err.println("[Cape] Texture not found: " + texturePath);
                 return;
             }
             BufferedImage image = ImageIO.read(is);
@@ -37,10 +35,11 @@ public class Cape {
                 return;
             }
 
-            Minecraft mc = Minecraft.getMinecraft();
-            mc.addScheduledTask(() ->
-                    mc.getTextureManager().loadTexture(resource, new DynamicTexture(image))
-            );
+            // RenderTickEvent já roda na game thread — sem addScheduledTask
+            Minecraft.getMinecraft()
+                    .getTextureManager()
+                    .loadTexture(resource, new DynamicTexture(image));
+
         } catch (Exception e) {
             e.printStackTrace();
         }
