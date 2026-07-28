@@ -12,32 +12,26 @@ import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.GL11;
 
 import java.util.Collections;
 import java.util.List;
 
 public class DamageIndicatorModule extends BaseModule implements Configurable {
 
-    // Dimensões
     private static final int W   = 100;
     private static final int H   = 28;
     private static final int PAD = 5;
 
-    // Cores
-    private static final int COLOR_BG     = 0xAA0A111E;
-    private static final int COLOR_BORDER = 0xFF5BA3DC;
     private static final int COLOR_NAME   = 0xFFFFFFFF;
-    private static final int COLOR_HP_CUR = 0xFFFF5555;
-    private static final int COLOR_HP_MAX = 0xFFAAAAAA;
+    private static final int COLOR_HP_CUR = 0xFFAA0000;
 
-    // Posição (drag)
     private int hudX = 10;
     private int hudY = 10;
 
-    // Drag state
-    private boolean dragging  = false;
-    private int     dragOffX  = 0;
-    private int     dragOffY  = 0;
+    private boolean dragging   = false;
+    private int     dragOffX   = 0;
+    private int     dragOffY   = 0;
     private boolean rmbWasDown = false;
 
     public DamageIndicatorModule() {
@@ -45,11 +39,8 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
         loadConfig();
     }
 
-    // Configurable — sem opções visuais, só para aparecer no painel
     @Override public List<ModuleOption<?>> getOptions() { return Collections.emptyList(); }
     @Override public void onOptionChanged() {}
-
-    // -------------------------------------------------------------------------
 
     @EventHandler
     public void onRender(EventRender2D event) {
@@ -62,49 +53,63 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
 
         int x = hudX, y = hudY;
 
-        String name   = getTargetName(target);
-        int    hpCur  = (int) target.getHealth();
-        int    hpMax  = (int) target.getMaxHealth();
-
-        // Borda + fundo
-        RenderUtil.drawRect(x - 1, y - 1, x + W + 1, y + H + 1, COLOR_BORDER);
-        RenderUtil.drawRect(x,     y,      x + W,     y + H,     COLOR_BG);
+        String name  = getTargetName(target);
+        int    hpCur = (int) target.getHealth();
+        int    hpMax = (int) target.getMaxHealth();
 
         // Linha 1 — nome
-        String nameLabel = "[" + name + "]";
-        RenderUtil.drawStringWithShadow(nameLabel, x + PAD, y + PAD, COLOR_NAME);
+        RenderUtil.drawStringWithShadow("[" + name + "]", x + PAD, y + PAD, COLOR_NAME);
 
-        // Linha 2 — vida atual ♥ / vida máx ♥
-        String hpCurStr = hpCur + " \u2665 ";
-        String slash    = "/ ";
-        String hpMaxStr = hpMax + " \u2665";
+        // Linha 2 — vida
+        String hpCurNum = String.valueOf(hpCur);
+        String heart    = "\u2665";
+        String slash    = "/";
+        String hpMaxNum = String.valueOf(hpMax);
 
-        float cx   = x + PAD;
-        float lineY = y + PAD + mc.fontRendererObj.FONT_HEIGHT + 2;
+        float cx           = x + PAD;
+        float lineY        = y + PAD + mc.fontRendererObj.FONT_HEIGHT + 2;
+        float scaleX       = 1.8f;
+        float scaleY       = 1.5f;
+        float heartOffsetY = lineY - (mc.fontRendererObj.FONT_HEIGHT / 2f) * (scaleY - 1f) - 1f;
+        float heartWidth   = mc.fontRendererObj.getStringWidth(heart) * scaleX;
 
-        RenderUtil.drawStringWithShadow(hpCurStr, cx, lineY, COLOR_HP_CUR);
-        cx += mc.fontRendererObj.getStringWidth(hpCurStr);
+        // número atual
+        RenderUtil.drawStringWithShadow(hpCurNum, cx, lineY, COLOR_NAME);
+        cx += mc.fontRendererObj.getStringWidth(hpCurNum) + 1;
 
+        // coração 1
+        GL11.glPushMatrix();
+        GL11.glTranslatef(cx, heartOffsetY, 0);
+        GL11.glScalef(scaleX, scaleY, 1f);
+        RenderUtil.drawStringWithShadow(heart, 0, 0, COLOR_HP_CUR);
+        GL11.glPopMatrix();
+        cx += heartWidth + 1;
+
+        // slash
         RenderUtil.drawStringWithShadow(slash, cx, lineY, COLOR_NAME);
-        cx += mc.fontRendererObj.getStringWidth(slash);
+        cx += mc.fontRendererObj.getStringWidth(slash) + 1;
 
-        RenderUtil.drawStringWithShadow(hpMaxStr, cx, lineY, COLOR_HP_MAX);
+        // número máximo
+        RenderUtil.drawStringWithShadow(hpMaxNum, cx, lineY, COLOR_NAME);
+        cx += mc.fontRendererObj.getStringWidth(hpMaxNum) + 1;
+
+        // coração 2
+        GL11.glPushMatrix();
+        GL11.glTranslatef(cx, heartOffsetY, 0);
+        GL11.glScalef(scaleX, scaleY, 1f);
+        RenderUtil.drawStringWithShadow(heart, 0, 0, COLOR_HP_CUR);
+        GL11.glPopMatrix();
     }
 
-    // -------------------------------------------------------------------------
-    // Drag — botão direito sobre o HUD arrasta, solta salva
-
     private void handleDrag(ScaledResolution res) {
-        // Coordenadas do mouse em scaled pixels
-        int sw      = res.getScaledWidth();
-        int sh      = res.getScaledHeight();
-        int mouseX  = (int)(Mouse.getX() * sw  / (double) mc.displayWidth);
-        int mouseY  = (int)((mc.displayHeight - Mouse.getY() - 1) * sh / (double) mc.displayHeight);
+        int sw     = res.getScaledWidth();
+        int sh     = res.getScaledHeight();
+        int mouseX = (int)(Mouse.getX() * sw  / (double) mc.displayWidth);
+        int mouseY = (int)((mc.displayHeight - Mouse.getY() - 1) * sh / (double) mc.displayHeight);
 
         boolean rmb = Mouse.isButtonDown(1);
 
         if (rmb && !rmbWasDown) {
-            // Botão direito acabou de ser pressionado
             if (mouseX >= hudX && mouseX <= hudX + W
                     && mouseY >= hudY && mouseY <= hudY + H) {
                 dragging = true;
@@ -114,7 +119,6 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
         }
 
         if (!rmb && rmbWasDown && dragging) {
-            // Soltou — salva posição
             dragging = false;
             saveConfig();
         }
@@ -122,16 +126,12 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
         if (dragging && rmb) {
             hudX = mouseX - dragOffX;
             hudY = mouseY - dragOffY;
-
-            // Clamp dentro da tela
             hudX = Math.max(0, Math.min(hudX, sw - W));
             hudY = Math.max(0, Math.min(hudY, sh - H));
         }
 
         rmbWasDown = rmb;
     }
-
-    // -------------------------------------------------------------------------
 
     private EntityLivingBase getTarget() {
         if (mc.pointedEntity instanceof EntityLivingBase) {
@@ -158,18 +158,16 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
         return raw.isEmpty() ? raw : Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
 
-    // -------------------------------------------------------------------------
-
     public void saveConfig() {
         JsonObject obj = new JsonObject();
         obj.addProperty("x", hudX);
         obj.addProperty("y", hudY);
-        Tesseract.instance().getConfigManager().setSection("TargetHUD", obj);
+        Tesseract.instance().getConfigManager().setSection("DamageIndicator", obj);
         Tesseract.instance().getConfigManager().save();
     }
 
     private void loadConfig() {
-        JsonObject obj = Tesseract.instance().getConfigManager().getSection("TargetHUD");
+        JsonObject obj = Tesseract.instance().getConfigManager().getSection("DamageIndicator");
         if (obj == null) return;
         if (obj.has("x")) hudX = obj.get("x").getAsInt();
         if (obj.has("y")) hudY = obj.get("y").getAsInt();
