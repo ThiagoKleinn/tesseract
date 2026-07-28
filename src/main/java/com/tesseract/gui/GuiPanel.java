@@ -1,6 +1,7 @@
 package com.tesseract.gui;
 
 import com.tesseract.module.BaseModule;
+import com.tesseract.module.config.Configurable;
 import com.tesseract.module.modules.CapeModule;
 import com.tesseract.module.modules.cape.CapeSelectionGui;
 import net.minecraft.client.Minecraft;
@@ -50,6 +51,13 @@ public class GuiPanel {
     private static final int COLOR_BIND_TEXT     = 0xFFC8D8F0;
     private static final int COLOR_BIND_KEY      = 0xFF85B7EB;
 
+    // configurable
+    private static final int OPTION_H        = 14;
+    private static final int COLOR_OPTION_BG = 0xCC0D1A28;
+    private static final int COLOR_OPTION_LB = 0xFF378ADD; // label
+    private static final int COLOR_OPTION_VL = 0xFFFFFFFF; // valor
+    private static final int COLOR_ARROW     = 0xFF85B7EB;
+
     // -------------------------------------------------------------------------
 
     private final String title;
@@ -80,10 +88,12 @@ public class GuiPanel {
         for (BaseModule m : modules) {
             h += MODULE_H;
             if (m.isBindable() && m.isBindPanelOpen()) h += BIND_PANEL_H;
+            if (m instanceof Configurable && m.isBindPanelOpen()) {
+                h += ((Configurable) m).getOptions().size() * OPTION_H;
+            }
         }
         return h;
     }
-
     // -------------------------------------------------------------------------
     // Render
 
@@ -150,6 +160,34 @@ public class GuiPanel {
             curY = drawBindPanel(module, curY, mouseX, mouseY, isCosmetics);
         }
 
+        // Opções do módulo (Configurable)
+        if (module instanceof com.tesseract.module.config.Configurable && module.isBindPanelOpen()) {
+            curY = drawOptions((com.tesseract.module.config.Configurable) module, curY, mouseX, mouseY);
+        }
+
+        return curY;
+    }
+
+    private int drawOptions(com.tesseract.module.config.Configurable configurable, int curY, int mouseX, int mouseY) {
+        for (com.tesseract.module.config.ModuleOption<?> opt : configurable.getOptions()) {
+            boolean hovered = mouseX >= x && mouseX <= x + WIDTH
+                    && mouseY >= curY && mouseY <= curY + OPTION_H;
+
+            drawRect(x + 2, curY, x + WIDTH - 2, curY + OPTION_H,
+                    hovered ? 0x33378ADD : COLOR_OPTION_BG);
+
+            // Label
+            Minecraft.getMinecraft().fontRendererObj.drawString(
+                    opt.getLabel(), x + PADDING + 2, curY + 3, COLOR_OPTION_LB);
+
+            // Valor com setas
+            String val = "< " + opt.getDisplayValue() + " >";
+            int vw = Minecraft.getMinecraft().fontRendererObj.getStringWidth(val);
+            Minecraft.getMinecraft().fontRendererObj.drawString(
+                    val, x + WIDTH - PADDING - vw - 2, curY + 3, COLOR_OPTION_VL);
+
+            curY += OPTION_H;
+        }
         return curY;
     }
 
@@ -249,19 +287,15 @@ public class GuiPanel {
                 if (module instanceof CapeModule) {
                     Minecraft.getMinecraft().displayGuiScreen(new CapeSelectionGui());
                 } else if (button == 0) {
-                    // Clique esquerdo: toggle
-                    // Fecha bind panel se estava aberto
-                    if (module.isBindable() && module.isBindPanelOpen()) {
+                    if (module.isBindPanelOpen()) {
                         module.closeBindPanel();
                     } else {
                         module.toggle();
                     }
-                } else if (button == 1 && module.isBindable()) {
-                    // Clique direito: abre/fecha sub-painel de bind
+                } else if (button == 1) {
                     if (module.isBindPanelOpen()) {
                         module.closeBindPanel();
                     } else {
-                        // Fecha outros bind panels abertos
                         closeAllBindPanels();
                         module.openBindPanel();
                     }
@@ -271,7 +305,7 @@ public class GuiPanel {
 
             curY += MODULE_H;
 
-            // Clique dentro do sub-painel de bind
+            // Clique dentro do sub-painel de bind (só módulos bindable)
             if (module.isBindable() && module.isBindPanelOpen()) {
                 int bindPanelY = curY;
                 if (mouseX >= x && mouseX <= x + WIDTH
@@ -280,6 +314,24 @@ public class GuiPanel {
                     return;
                 }
                 curY += BIND_PANEL_H;
+            }
+
+            // Clique nas opções (Configurable)
+            if (module instanceof com.tesseract.module.config.Configurable && module.isBindPanelOpen()) {
+                com.tesseract.module.config.Configurable cfg =
+                        (com.tesseract.module.config.Configurable) module;
+                int optY = curY;
+                for (com.tesseract.module.config.ModuleOption<?> opt : cfg.getOptions()) {
+                    if (mouseX >= x && mouseX <= x + WIDTH
+                            && mouseY >= optY && mouseY <= optY + OPTION_H) {
+                        if (button == 0) opt.onLeftClick();
+                        else if (button == 1) opt.onRightClick();
+                        cfg.onOptionChanged();
+                        return;
+                    }
+                    optY += OPTION_H;
+                }
+                curY += cfg.getOptions().size() * OPTION_H;
             }
         }
     }
