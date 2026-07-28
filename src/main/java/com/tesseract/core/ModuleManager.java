@@ -24,6 +24,7 @@ public class ModuleManager {
         register(new KeystrokesModule());
         register(new ZoomModule());
         register(new ClickGuiModule());
+        register(new DamageIndicatorModule());
 
         // --- COSMETICS ---
         register(new CapeModule());
