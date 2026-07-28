@@ -1,5 +1,6 @@
 package com.tesseract;
 
+import com.tesseract.core.ConfigManager;
 import com.tesseract.core.ForgeEventListener;
 import com.tesseract.core.ModuleManager;
 import com.tesseract.event.EventBus;
@@ -29,6 +30,7 @@ public class Tesseract {
 
     private EventBus     eventBus;
     private ModuleManager moduleManager;
+    private ConfigManager configManager;
 
     // -------------------------------------------------------------------------
 
@@ -36,6 +38,7 @@ public class Tesseract {
     public void preInit(FMLPreInitializationEvent event) {
         eventBus      = new EventBus();
         moduleManager = new ModuleManager();
+        configManager = new ConfigManager();
     }
 
     @Mod.EventHandler
@@ -45,6 +48,7 @@ public class Tesseract {
 
         // Carrega todos os módulos
         moduleManager.init();
+        configManager.load();
 
         System.out.println("{Tesseract} inicializado com sucesso!");
     }
@@ -53,4 +57,5 @@ public class Tesseract {
 
     public EventBus      getEventBus()      { return eventBus; }
     public ModuleManager getModuleManager() { return moduleManager; }
+    public ConfigManager getConfigManager() { return configManager; }
 }
