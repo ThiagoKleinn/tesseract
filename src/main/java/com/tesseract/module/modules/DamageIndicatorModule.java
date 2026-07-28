@@ -42,6 +42,19 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
     @Override public List<ModuleOption<?>> getOptions() { return Collections.emptyList(); }
     @Override public void onOptionChanged() {}
 
+    // -------------------------------------------------------------------------
+    // Getters/Setters para o HudLayoutScreen
+
+    public int getHudX() { return hudX; }
+    public int getHudY() { return hudY; }
+
+    public void setHudPos(int x, int y) {
+        this.hudX = x;
+        this.hudY = y;
+    }
+
+    // -------------------------------------------------------------------------
+
     @EventHandler
     public void onRender(EventRender2D event) {
         if (mc.thePlayer == null || mc.theWorld == null) return;
@@ -70,7 +83,7 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
         float lineY        = y + PAD + mc.fontRendererObj.FONT_HEIGHT + 2;
         float scaleX       = 1.8f;
         float scaleY       = 1.5f;
-        float heartOffsetY = lineY - (mc.fontRendererObj.FONT_HEIGHT / 2f) * (scaleY - 1f) - 1f;
+        float heartOffsetY = lineY - (mc.fontRendererObj.FONT_HEIGHT / 2f) * (scaleY - 1f) - 1.2f;
         float heartWidth   = mc.fontRendererObj.getStringWidth(heart) * scaleX;
 
         // número atual

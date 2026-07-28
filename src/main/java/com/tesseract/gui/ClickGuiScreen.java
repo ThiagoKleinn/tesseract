@@ -16,6 +16,7 @@ import java.util.List;
  * Abre/fecha com RSHIFT (via ClickGuiModule).
  * Fundo: cosmic escuro com estrelas fixas.
  * Painéis draggáveis por categoria (um painel por categoria).
+ * Botão "HUD LAYOUT" no header para abrir a tela de posicionamento de HUDs.
  */
 public class ClickGuiScreen extends GuiScreen {
 
@@ -26,6 +27,11 @@ public class ClickGuiScreen extends GuiScreen {
     private final int[] starX    = new int[STAR_COUNT];
     private final int[] starY    = new int[STAR_COUNT];
     private final int[] starSize = new int[STAR_COUNT];
+
+    // Botão HUD LAYOUT
+    private static final int BTN_W = 80;
+    private static final int BTN_H = 14;
+    private static final int BTN_MARGIN = 8;
 
     // -------------------------------------------------------------------------
 
@@ -86,6 +92,7 @@ public class ClickGuiScreen extends GuiScreen {
             panel.draw(mouseX, mouseY);
         }
 
+        drawHudLayoutButton(mouseX, mouseY);
         drawHint();
 
         super.drawScreen(mouseX, mouseY, partialTicks);
@@ -130,6 +137,29 @@ public class ClickGuiScreen extends GuiScreen {
         mc.fontRendererObj.drawString(title, tx, 12, 0xCC85B7EB);
     }
 
+    private void drawHudLayoutButton(int mouseX, int mouseY) {
+        int bx = width / 2 - BTN_W / 2;
+        int by = 28; // logo abaixo do título
+
+        boolean hovered = mouseX >= bx && mouseX <= bx + BTN_W
+                && mouseY >= by && mouseY <= by + BTN_H;
+
+        // Fundo
+        drawRect(bx, by, bx + BTN_W, by + BTN_H,
+                hovered ? 0x55378ADD : 0x33378ADD);
+        // Borda
+        drawBorder(bx, by, bx + BTN_W, by + BTN_H,
+                hovered ? 0xFF85B7EB : 0x6685B7EB);
+
+        // Texto
+        String label = "HUD LAYOUT";
+        int lw = mc.fontRendererObj.getStringWidth(label);
+        mc.fontRendererObj.drawString(label,
+                bx + BTN_W / 2 - lw / 2,
+                by + BTN_H / 2 - 3,
+                hovered ? 0xFFFFFFFF : 0xCC85B7EB);
+    }
+
     private void drawHint() {
         String keyLabel  = "RSHIFT";
         String hintLabel = " para abrir / fechar";
@@ -151,6 +181,17 @@ public class ClickGuiScreen extends GuiScreen {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+        // Verifica clique no botão HUD LAYOUT
+        if (mouseButton == 0) {
+            int bx = width / 2 - BTN_W / 2;
+            int by = 28;
+            if (mouseX >= bx && mouseX <= bx + BTN_W
+                    && mouseY >= by && mouseY <= by + BTN_H) {
+                mc.displayGuiScreen(new HudLayoutScreen());
+                return;
+            }
+        }
+
         for (GuiPanel panel : panels) {
             panel.mouseClicked(mouseX, mouseY, mouseButton);
         }
