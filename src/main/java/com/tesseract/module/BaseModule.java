@@ -27,6 +27,9 @@ public abstract class BaseModule {
     // Aguardando tecla para registrar?
     private boolean listeningForKey = false;
 
+    // keybind bug
+    public boolean isToggleByKey() { return true; }
+
     // -------------------------------------------------------------------------
 
     public BaseModule(String name, String description, Category category, int keybind) {

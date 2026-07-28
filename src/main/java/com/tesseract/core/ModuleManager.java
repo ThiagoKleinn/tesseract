@@ -73,7 +73,7 @@ public class ModuleManager {
     /** Verifica se algum módulo tem aquela keybind e faz toggle. */
     public void onKeyPress(int keyCode) {
         for (BaseModule module : modules) {
-            if (module.getKeybind() == keyCode) {
+            if (module.getKeybind() == keyCode && module.isToggleByKey()) {
                 module.toggle();
             }
         }

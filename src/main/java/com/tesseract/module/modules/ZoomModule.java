@@ -4,69 +4,85 @@ import com.tesseract.event.EventHandler;
 import com.tesseract.event.events.EventRenderTick;
 import com.tesseract.event.events.EventTick;
 import com.tesseract.module.BaseModule;
-import net.minecraft.client.settings.GameSettings;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
 
 public class ZoomModule extends BaseModule {
 
-    private float originalFOV     = 70f;
-    private float zoomFOV         = 15f;
-    private float currentFOV      = 70f;
-    private float originalSens    = 100f;
+    private float originalFOV  = 70f;
+    private float originalSens = 100f;
+    private float currentFOV   = 70f;
 
-    private static final float ZOOM_STEP    = 2f;
-    private static final float ZOOM_MIN     = 5f;
-    private static final float ZOOM_MAX     = 55f;
+    private static final float ZOOM_FOV     = 15f;
     private static final float SMOOTH_SPEED = 0.15f;
 
+    private boolean zooming = false;
+    private boolean skipFirst   = true;
+
     public ZoomModule() {
-        super("Zoom", "Zoom suave igual OptiFine. Scroll para ajustar.", Category.MODS, Keyboard.KEY_V);
+        super("Zoom", "Zoom fixo. Segure a bind para dar zoom.", Category.MODS, Keyboard.KEY_NONE);
     }
 
     @Override
     public boolean isBindable() { return true; }
 
     @Override
+    public boolean isToggleByKey() { return false; }
+
+    @Override
     public void onEnable() {
         originalFOV  = mc.gameSettings.fovSetting;
         originalSens = mc.gameSettings.mouseSensitivity;
         currentFOV   = originalFOV;
+        skipFirst    = true;
     }
 
     @Override
     public void onDisable() {
+        zooming = false;
         mc.gameSettings.mouseSensitivity = originalSens;
+        currentFOV = originalFOV;
+        mc.gameSettings.fovSetting = originalFOV;
     }
 
-    // Scroll e sensibilidade no game tick (20x/s é suficiente)
     @EventHandler
     public void onTick(EventTick event) {
         if (event.getPhase() != EventTick.Phase.PRE) return;
+        if (!isEnabled()) return;
 
-        if (isEnabled() && mc.currentScreen == null) {
-            // Scroll para ajustar zoom
-            int scroll = Mouse.getDWheel();
-            if (scroll > 0) zoomFOV = Math.max(ZOOM_MIN, zoomFOV - ZOOM_STEP);
-            else if (scroll < 0) zoomFOV = Math.min(ZOOM_MAX, zoomFOV + ZOOM_STEP);
+        // Verifica se a bind está sendo segurada
+        int key = getKeybind();
+        boolean holding = key != Keyboard.KEY_NONE && Keyboard.isKeyDown(key);
 
-            // Sensibilidade proporcional ao zoom (igual OptiFine)
-            float zoomFactor = originalFOV / zoomFOV;
+        // Ignora o primeiro tick (a tecla que ativou o módulo ainda está pressionada)
+        if (skipFirst) {
+            if (!holding) skipFirst = false; // espera soltar a tecla antes de começar
+            return;
+        }
+
+        if (holding && !zooming) {
+            // Começou a segurar
+            zooming = true;
+            originalFOV  = mc.gameSettings.fovSetting;
+            originalSens = mc.gameSettings.mouseSensitivity;
+
+            // Sensibilidade proporcional ao zoom
+            float zoomFactor = originalFOV / ZOOM_FOV;
             mc.gameSettings.mouseSensitivity = originalSens / zoomFactor;
-        } else if (!isEnabled()) {
+
+        } else if (!holding && zooming) {
+            // Soltou
+            zooming = false;
             mc.gameSettings.mouseSensitivity = originalSens;
         }
     }
 
-    // Suavização do FOV no render tick (60fps+)
     @EventHandler
     public void onRenderTick(EventRenderTick event) {
-        float targetFOV = isEnabled() ? zoomFOV : originalFOV;
+        if (!isEnabled()) return;
 
-        // Lerp suave
+        float targetFOV = zooming ? ZOOM_FOV : originalFOV;
         currentFOV += (targetFOV - currentFOV) * SMOOTH_SPEED;
 
-        // Snap final para evitar drift infinito
         if (Math.abs(currentFOV - targetFOV) < 0.05f) {
             currentFOV = targetFOV;
         }
