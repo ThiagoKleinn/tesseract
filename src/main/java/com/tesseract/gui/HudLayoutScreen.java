@@ -3,6 +3,7 @@ package com.tesseract.gui;
 import com.tesseract.Tesseract;
 import com.tesseract.module.BaseModule;
 import com.tesseract.module.modules.DamageIndicatorModule;
+import com.tesseract.module.modules.StatusEffectModule;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import org.lwjgl.input.Keyboard;
@@ -11,19 +12,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * HudLayoutScreen — permite arrastar os HUDs ativos pela tela.
- * Acessível via botão no ClickGuiScreen.
- */
 public class HudLayoutScreen extends GuiScreen {
 
-    // Representa um HUD arrastável nessa tela
     private static class HudHandle {
         String label;
         int x, y, w, h;
         boolean dragging;
         int dragOffX, dragOffY;
-        Runnable onMove; // callback chamado quando a posição muda
+        Runnable onMove;
 
         HudHandle(String label, int x, int y, int w, int h, Runnable onMove) {
             this.label  = label;
@@ -37,10 +33,9 @@ public class HudLayoutScreen extends GuiScreen {
 
     private final List<HudHandle> handles = new ArrayList<>();
 
-    // Referências aos módulos com HUD
     private DamageIndicatorModule damageIndicator;
+    private StatusEffectModule    statusEffect;
 
-    // Cores
     private static final int COLOR_BG_OVERLAY  = 0xAA0A111E;
     private static final int COLOR_HANDLE_BG   = 0xCC0D1A28;
     private static final int COLOR_HANDLE_BDR  = 0xFF378ADD;
@@ -54,11 +49,15 @@ public class HudLayoutScreen extends GuiScreen {
     @Override
     public void initGui() {
         handles.clear();
+        damageIndicator = null;
+        statusEffect    = null;
 
-        // Coleta DamageIndicatorModule se estiver ativo
         for (BaseModule m : Tesseract.instance().getModuleManager().getModules(BaseModule.Category.MODS)) {
             if (m instanceof DamageIndicatorModule && m.isEnabled()) {
                 damageIndicator = (DamageIndicatorModule) m;
+            }
+            if (m instanceof StatusEffectModule && m.isEnabled()) {
+                statusEffect = (StatusEffectModule) m;
             }
         }
 
@@ -71,9 +70,21 @@ public class HudLayoutScreen extends GuiScreen {
                     W, H,
                     () -> {
                         HudHandle h = handleByLabel("Damage Indicator");
-                        if (h != null) {
-                            damageIndicator.setHudPos(h.x, h.y);
-                        }
+                        if (h != null) damageIndicator.setHudPos(h.x, h.y);
+                    }
+            ));
+        }
+
+        if (statusEffect != null) {
+            final int W = 90, H = 40;
+            handles.add(new HudHandle(
+                    "Status Effects",
+                    statusEffect.getHudX(),
+                    statusEffect.getHudY(),
+                    W, H,
+                    () -> {
+                        HudHandle h = handleByLabel("Status Effects");
+                        if (h != null) statusEffect.setHudPos(h.x, h.y);
                     }
             ));
         }
@@ -84,7 +95,6 @@ public class HudLayoutScreen extends GuiScreen {
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        // Fundo semi-transparente (mostra o jogo atrás)
         drawRect(0, 0, width, height, COLOR_BG_OVERLAY);
 
         // Título
@@ -93,18 +103,14 @@ public class HudLayoutScreen extends GuiScreen {
         mc.fontRendererObj.drawString(title, width / 2 - tw / 2 + 1, 13, 0x22378ADD);
         mc.fontRendererObj.drawString(title, width / 2 - tw / 2,     12, COLOR_TITLE);
 
-        // Handles
         if (handles.isEmpty()) {
             String msg = "Nenhum HUD ativo para posicionar.";
             int mw = mc.fontRendererObj.getStringWidth(msg);
             mc.fontRendererObj.drawString(msg, width / 2 - mw / 2, height / 2 - 4, COLOR_HINT);
         } else {
-            for (HudHandle h : handles) {
-                drawHandle(h, mouseX, mouseY);
-            }
+            for (HudHandle h : handles) drawHandle(h, mouseX, mouseY);
         }
 
-        // Dica de fechar
         String hint = "ESC para fechar e salvar";
         mc.fontRendererObj.drawString(hint, 8, height - 12, COLOR_HINT);
 
@@ -115,14 +121,10 @@ public class HudLayoutScreen extends GuiScreen {
         boolean hovered = mouseX >= h.x && mouseX <= h.x + h.w
                 && mouseY >= h.y && mouseY <= h.y + h.h;
 
-        // Fundo
         Gui.drawRect(h.x, h.y, h.x + h.w, h.y + h.h,
                 hovered || h.dragging ? COLOR_HOVER : COLOR_HANDLE_BG);
-
-        // Borda
         drawBorder(h.x, h.y, h.x + h.w, h.y + h.h, COLOR_HANDLE_BDR);
 
-        // Label centrado
         int lw = mc.fontRendererObj.getStringWidth(h.label);
         mc.fontRendererObj.drawString(
                 h.label,
@@ -156,7 +158,7 @@ public class HudLayoutScreen extends GuiScreen {
         for (HudHandle h : handles) {
             if (h.dragging) {
                 h.dragging = false;
-                h.onMove.run(); // persiste a posição
+                h.onMove.run();
             }
         }
         super.mouseReleased(mouseX, mouseY, state);
@@ -189,22 +191,17 @@ public class HudLayoutScreen extends GuiScreen {
     // -------------------------------------------------------------------------
 
     private void saveAll() {
-        if (damageIndicator != null) {
-            damageIndicator.saveConfig();
-        }
+        if (damageIndicator != null) damageIndicator.saveConfig();
+        if (statusEffect    != null) statusEffect.saveConfig();
     }
 
     private HudHandle handleByLabel(String label) {
-        for (HudHandle h : handles) {
-            if (h.label.equals(label)) return h;
-        }
+        for (HudHandle h : handles) if (h.label.equals(label)) return h;
         return null;
     }
 
     @Override
     public boolean doesGuiPauseGame() { return false; }
-
-    // -------------------------------------------------------------------------
 
     private void drawBorder(int x1, int y1, int x2, int y2, int color) {
         Gui.drawRect(x1,     y1,     x2,     y1 + 1, color);
