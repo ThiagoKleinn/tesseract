@@ -102,6 +102,18 @@ public class StatusEffectModule extends BaseModule implements Configurable {
 
         int curY = hudY;
 
+        // Pré-calcula largura máxima dos textos para fixar coluna do ícone no modo RIGHT
+        int maxTextW = 0;
+        if (iconRight) {
+            for (PotionEffect e2 : effects) {
+                int id2 = e2.getPotionID();
+                if (!effectFilter.getOrDefault(id2, true)) continue;
+                int w = Math.max(mc.fontRendererObj.getStringWidth(getPotionName(e2, id2)),
+                        mc.fontRendererObj.getStringWidth(formatDuration(e2.getDuration())));
+                if (w > maxTextW) maxTextW = w;
+            }
+        }
+
         for (PotionEffect effect : effects) {
             int id = effect.getPotionID();
             if (!effectFilter.getOrDefault(id, true)) continue;
@@ -111,28 +123,17 @@ public class StatusEffectModule extends BaseModule implements Configurable {
 
             String name    = getPotionName(effect, id);
             String timeStr = formatDuration(effect.getDuration());
+            int color      = potion.getLiquidColor() | 0xFF000000;
 
-            int nameW = mc.fontRendererObj.getStringWidth(name);
-            int timeW = mc.fontRendererObj.getStringWidth(timeStr);
-            int color  = potion.getLiquidColor() | 0xFF000000;
-
-            // Posições dependendo do alinhamento
             int iconX, textX;
-            // ícone alinhado verticalmente ao centro do bloco nome+tempo
-            int blockH  = mc.fontRendererObj.FONT_HEIGHT * 2 + 1;
-            int iconY2  = curY + (ICON_SIZE / 2) - (blockH / 2); // Y do ícone centrado no bloco
-
             if (iconRight) {
-                // texto à esquerda, ícone à direita alinhado com o nome
                 textX = hudX;
-                iconX = hudX + Math.max(nameW, timeW) + TEXT_PAD;
+                iconX = hudX + maxTextW + TEXT_PAD;
             } else {
-                // ícone à esquerda, texto à direita
                 iconX = hudX;
                 textX = hudX + ICON_SIZE + TEXT_PAD;
             }
 
-            // Nome e tempo empilhados, alinhados entre si
             int nameY = curY + (ICON_SIZE / 2) - mc.fontRendererObj.FONT_HEIGHT;
             int timeY = nameY + mc.fontRendererObj.FONT_HEIGHT + 1;
 
@@ -140,9 +141,7 @@ public class StatusEffectModule extends BaseModule implements Configurable {
             mc.fontRendererObj.drawStringWithShadow(timeStr, textX, timeY, COLOR_TIME);
 
             if (potion.hasStatusIcon()) {
-                // no modo RIGHT centraliza o ícone verticalmente com o bloco nome+tempo
-                int iconY = iconRight ? iconY2 : curY;
-                drawPotionIcon(potion, iconX, iconY);
+                drawPotionIcon(potion, iconX, curY);
             }
 
             curY += ICON_SIZE + GAP;
