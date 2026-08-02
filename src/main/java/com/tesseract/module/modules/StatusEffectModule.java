@@ -20,15 +20,13 @@ public class StatusEffectModule extends BaseModule implements Configurable {
     // -------------------------------------------------------------------------
     // Layout
 
-    private static final int ICON_SIZE = 18; // tamanho real do sprite no atlas
-    private static final int GAP       = 3;  // espaço entre entradas
-    private static final int TEXT_PAD  = 3;  // espaço entre texto e ícone
+    private static final int ICON_SIZE = 18;
+    private static final int GAP       = 3;
+    private static final int TEXT_PAD  = 3;
 
-    // Atlas do inventário — onde ficam os ícones de efeito no 1.8.9
     private static final ResourceLocation INVENTORY_TEXTURE =
             new ResourceLocation("textures/gui/container/inventory.png");
 
-    // Cores
     private static final int COLOR_TIME = 0xFFAAAAAA;
 
     // Posição HUD
@@ -36,7 +34,14 @@ public class StatusEffectModule extends BaseModule implements Configurable {
     private int hudY = 60;
 
     // -------------------------------------------------------------------------
-    // Nomes hardcoded em inglês
+    // Opção de alinhamento: false = ícone esquerda (padrão), true = ícone direita
+
+    private boolean iconRight = false;
+
+    private final AlignmentOption alignOption = new AlignmentOption();
+
+    // -------------------------------------------------------------------------
+    // Nomes hardcoded
 
     private static final Map<Integer, String> POTION_NAMES = new HashMap<>();
     static {
@@ -69,13 +74,14 @@ public class StatusEffectModule extends BaseModule implements Configurable {
     // Filtro de efeitos
 
     private final Map<Integer, Boolean> effectFilter = new LinkedHashMap<>();
-    private final List<ModuleOption<?>>  options      = new ArrayList<>();
+    private final List<ModuleOption<?>> options      = new ArrayList<>();
 
     // -------------------------------------------------------------------------
 
     public StatusEffectModule() {
         super("StatusEffect", "Exibe efeitos de poções ativos.", Category.MODS);
         loadConfig();
+        rebuildStaticOptions();
     }
 
     @Override public List<ModuleOption<?>> getOptions() { return options; }
@@ -92,7 +98,7 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         if (effects == null || effects.isEmpty()) return;
 
         syncFilterMap(effects);
-        rebuildOptions(effects);
+        rebuildDynamicOptions(effects);
 
         int curY = hudY;
 
@@ -108,23 +114,28 @@ public class StatusEffectModule extends BaseModule implements Configurable {
 
             int nameW = mc.fontRendererObj.getStringWidth(name);
             int timeW = mc.fontRendererObj.getStringWidth(timeStr);
-            int textW = Math.max(nameW, timeW);
+            int color  = potion.getLiquidColor() | 0xFF000000;
 
-            // texto à esquerda, ícone à direita
-            int nameX = hudX + (textW - nameW) / 2;
-            int timeX = hudX + (textW - timeW) / 2;
-            int iconX = hudX + textW + TEXT_PAD;
+            // Posições dependendo do alinhamento
+            int iconX, textX;
+            if (iconRight) {
+                // texto à esquerda, ícone à direita
+                textX = hudX;
+                iconX = hudX + Math.max(nameW, timeW) + TEXT_PAD;
+            } else {
+                // ícone à esquerda, texto à direita
+                iconX = hudX;
+                textX = hudX + ICON_SIZE + TEXT_PAD;
+            }
 
-            // centraliza verticalmente o texto em relação ao ícone
+            // Nome na linha do ícone (verticalmente centrado)
             int nameY = curY + (ICON_SIZE / 2) - mc.fontRendererObj.FONT_HEIGHT;
+            // Tempo alinhado abaixo do nome (mesmo X do nome)
             int timeY = nameY + mc.fontRendererObj.FONT_HEIGHT + 1;
 
-            int color = potion.getLiquidColor() | 0xFF000000;
+            mc.fontRendererObj.drawStringWithShadow(name,    textX, nameY, color);
+            mc.fontRendererObj.drawStringWithShadow(timeStr, textX, timeY, COLOR_TIME);
 
-            mc.fontRendererObj.drawStringWithShadow(name,    nameX, nameY, color);
-            mc.fontRendererObj.drawStringWithShadow(timeStr, timeX, timeY, COLOR_TIME);
-
-            // ícone real da poção
             if (potion.hasStatusIcon()) {
                 drawPotionIcon(potion, iconX, curY);
             }
@@ -134,27 +145,19 @@ public class StatusEffectModule extends BaseModule implements Configurable {
     }
 
     // -------------------------------------------------------------------------
-    // Ícone real — 1.8.9 usa drawTexturedModalRect no atlas inventory.png
-    // Cada ícone ocupa 18x18px, organizados em grid a partir de y=198
+    // Ícone
 
     private void drawPotionIcon(Potion potion, int x, int y) {
         int iconIndex = potion.getStatusIconIndex();
-
-        // coluna e linha no grid do atlas
         int col = iconIndex % 8;
         int row = iconIndex / 8;
-
         int u = col * 18;
         int v = 198 + row * 18;
 
         GlStateManager.color(1f, 1f, 1f, 1f);
         GlStateManager.enableBlend();
         mc.getTextureManager().bindTexture(INVENTORY_TEXTURE);
-
-        // drawTexturedModalRect(x, y, u, v, width, height)
-        Gui gui = new Gui();
-        gui.drawTexturedModalRect(x, y, u, v, ICON_SIZE, ICON_SIZE);
-
+        new Gui().drawTexturedModalRect(x, y, u, v, ICON_SIZE, ICON_SIZE);
         GlStateManager.disableBlend();
     }
 
@@ -172,10 +175,20 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         for (PotionEffect e : effects) effectFilter.putIfAbsent(e.getPotionID(), true);
     }
 
-    private void rebuildOptions(Collection<PotionEffect> effects) {
+    /**
+     * Opções estáticas (alinhamento) ficam sempre no topo.
+     * Opções dinâmicas (toggle por efeito) ficam abaixo.
+     */
+    private void rebuildStaticOptions() {
+        options.clear();
+        options.add(alignOption);
+    }
+
+    private void rebuildDynamicOptions(Collection<PotionEffect> effects) {
         Set<Integer> activeIds = new HashSet<>();
         for (PotionEffect e : effects) activeIds.add(e.getPotionID());
 
+        // Coleta ids já presentes nas opções dinâmicas
         Set<Integer> optionIds = new HashSet<>();
         for (ModuleOption<?> opt : options)
             if (opt instanceof EffectToggleOption)
@@ -183,7 +196,9 @@ public class StatusEffectModule extends BaseModule implements Configurable {
 
         if (optionIds.equals(activeIds)) return;
 
-        options.clear();
+        // Remove antigas opções dinâmicas, mantém estáticas
+        options.removeIf(o -> o instanceof EffectToggleOption);
+
         for (PotionEffect effect : effects) {
             int id = effect.getPotionID();
             if (Potion.potionTypes[id] == null) continue;
@@ -216,6 +231,7 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         JsonObject obj = new JsonObject();
         obj.addProperty("x", hudX);
         obj.addProperty("y", hudY);
+        obj.addProperty("iconRight", iconRight);
         JsonObject filters = new JsonObject();
         for (Map.Entry<Integer, Boolean> e : effectFilter.entrySet())
             filters.addProperty(String.valueOf(e.getKey()), e.getValue());
@@ -227,13 +243,32 @@ public class StatusEffectModule extends BaseModule implements Configurable {
     private void loadConfig() {
         JsonObject obj = Tesseract.instance().getConfigManager().getSection("StatusEffect");
         if (obj == null) return;
-        if (obj.has("x")) hudX = obj.get("x").getAsInt();
-        if (obj.has("y")) hudY = obj.get("y").getAsInt();
+        if (obj.has("x"))         hudX      = obj.get("x").getAsInt();
+        if (obj.has("y"))         hudY      = obj.get("y").getAsInt();
+        if (obj.has("iconRight")) iconRight  = obj.get("iconRight").getAsBoolean();
         if (obj.has("filters"))
             for (Map.Entry<String, com.google.gson.JsonElement> e :
                     obj.getAsJsonObject("filters").entrySet())
                 try { effectFilter.put(Integer.parseInt(e.getKey()), e.getValue().getAsBoolean()); }
                 catch (NumberFormatException ignored) {}
+    }
+
+    // -------------------------------------------------------------------------
+    // AlignmentOption — aparece no ClickGUI como "Icon Side: LEFT / RIGHT"
+
+    private class AlignmentOption extends ModuleOption<Boolean> {
+        AlignmentOption() { super("Icon Side", iconRight); }
+
+        @Override public void onLeftClick()  { toggle(); }
+        @Override public void onRightClick() { toggle(); }
+
+        private void toggle() {
+            iconRight = !iconRight;
+            setValue(iconRight);
+            onOptionChanged();
+        }
+
+        @Override public String getDisplayValue() { return iconRight ? "RIGHT" : "LEFT"; }
     }
 
     // -------------------------------------------------------------------------
