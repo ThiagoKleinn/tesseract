@@ -25,6 +25,7 @@ public class ModuleManager {
         register(new ZoomModule());
         register(new ClickGuiModule());
         register(new DamageIndicatorModule());
+        register(new StatusEffectModule());
 
         // --- COSMETICS ---
         register(new CapeModule());
