@@ -118,8 +118,12 @@ public class StatusEffectModule extends BaseModule implements Configurable {
 
             // Posições dependendo do alinhamento
             int iconX, textX;
+            // ícone alinhado verticalmente ao centro do bloco nome+tempo
+            int blockH  = mc.fontRendererObj.FONT_HEIGHT * 2 + 1;
+            int iconY2  = curY + (ICON_SIZE / 2) - (blockH / 2); // Y do ícone centrado no bloco
+
             if (iconRight) {
-                // texto à esquerda, ícone à direita
+                // texto à esquerda, ícone à direita alinhado com o nome
                 textX = hudX;
                 iconX = hudX + Math.max(nameW, timeW) + TEXT_PAD;
             } else {
@@ -128,16 +132,17 @@ public class StatusEffectModule extends BaseModule implements Configurable {
                 textX = hudX + ICON_SIZE + TEXT_PAD;
             }
 
-            // Nome na linha do ícone (verticalmente centrado)
+            // Nome e tempo empilhados, alinhados entre si
             int nameY = curY + (ICON_SIZE / 2) - mc.fontRendererObj.FONT_HEIGHT;
-            // Tempo alinhado abaixo do nome (mesmo X do nome)
             int timeY = nameY + mc.fontRendererObj.FONT_HEIGHT + 1;
 
             mc.fontRendererObj.drawStringWithShadow(name,    textX, nameY, color);
             mc.fontRendererObj.drawStringWithShadow(timeStr, textX, timeY, COLOR_TIME);
 
             if (potion.hasStatusIcon()) {
-                drawPotionIcon(potion, iconX, curY);
+                // no modo RIGHT centraliza o ícone verticalmente com o bloco nome+tempo
+                int iconY = iconRight ? iconY2 : curY;
+                drawPotionIcon(potion, iconX, iconY);
             }
 
             curY += ICON_SIZE + GAP;
