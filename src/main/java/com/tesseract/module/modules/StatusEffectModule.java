@@ -7,11 +7,11 @@ import com.tesseract.event.events.EventRender2D;
 import com.tesseract.module.BaseModule;
 import com.tesseract.module.config.Configurable;
 import com.tesseract.module.config.ModuleOption;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.ResourceLocation;
-import org.lwjgl.opengl.GL11;
 
 import java.util.*;
 
@@ -20,10 +20,13 @@ public class StatusEffectModule extends BaseModule implements Configurable {
     // -------------------------------------------------------------------------
     // Layout
 
-    private static final int ICON_SIZE = 16;
-    private static final int LINE_H    = 10;
-    private static final int GAP       = 2;
-    private static final int TEXT_PAD  = 4;
+    private static final int ICON_SIZE = 18; // tamanho real do sprite no atlas
+    private static final int GAP       = 3;  // espaço entre entradas
+    private static final int TEXT_PAD  = 3;  // espaço entre texto e ícone
+
+    // Atlas do inventário — onde ficam os ícones de efeito no 1.8.9
+    private static final ResourceLocation INVENTORY_TEXTURE =
+            new ResourceLocation("textures/gui/container/inventory.png");
 
     // Cores
     private static final int COLOR_TIME = 0xFFAAAAAA;
@@ -33,7 +36,7 @@ public class StatusEffectModule extends BaseModule implements Configurable {
     private int hudY = 60;
 
     // -------------------------------------------------------------------------
-    // Nomes hardcoded em inglês por potionId
+    // Nomes hardcoded em inglês
 
     private static final Map<Integer, String> POTION_NAMES = new HashMap<>();
     static {
@@ -75,9 +78,6 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         loadConfig();
     }
 
-    // -------------------------------------------------------------------------
-    // Configurable
-
     @Override public List<ModuleOption<?>> getOptions() { return options; }
     @Override public void onOptionChanged() { saveConfig(); }
 
@@ -111,59 +111,51 @@ public class StatusEffectModule extends BaseModule implements Configurable {
             int textW = Math.max(nameW, timeW);
 
             // texto à esquerda, ícone à direita
-            int textX = hudX;
+            int nameX = hudX + (textW - nameW) / 2;
+            int timeX = hudX + (textW - timeW) / 2;
             int iconX = hudX + textW + TEXT_PAD;
 
-            // nome centralizado horizontalmente dentro do textW
-            int nameX = textX + (textW - nameW) / 2;
-            int nameY = curY + (ICON_SIZE / 2) - LINE_H;
-
-            // tempo centralizado
-            int timeX = textX + (textW - timeW) / 2;
-            int timeY = nameY + LINE_H + 1;
+            // centraliza verticalmente o texto em relação ao ícone
+            int nameY = curY + (ICON_SIZE / 2) - mc.fontRendererObj.FONT_HEIGHT;
+            int timeY = nameY + mc.fontRendererObj.FONT_HEIGHT + 1;
 
             int color = potion.getLiquidColor() | 0xFF000000;
 
             mc.fontRendererObj.drawStringWithShadow(name,    nameX, nameY, color);
             mc.fontRendererObj.drawStringWithShadow(timeStr, timeX, timeY, COLOR_TIME);
 
-            drawPotionIcon(potion, iconX, curY);
+            // ícone real da poção
+            if (potion.hasStatusIcon()) {
+                drawPotionIcon(potion, iconX, curY);
+            }
 
             curY += ICON_SIZE + GAP;
         }
     }
 
     // -------------------------------------------------------------------------
-    // Ícone real da poção
+    // Ícone real — 1.8.9 usa drawTexturedModalRect no atlas inventory.png
+    // Cada ícone ocupa 18x18px, organizados em grid a partir de y=198
 
     private void drawPotionIcon(Potion potion, int x, int y) {
-        try {
-            GL11.glEnable(GL11.GL_BLEND);
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GL11.glColor4f(1f, 1f, 1f, 1f);
+        int iconIndex = potion.getStatusIconIndex();
 
-            mc.getTextureManager().bindTexture(
-                    new ResourceLocation("textures/gui/container/inventory.png"));
+        // coluna e linha no grid do atlas
+        int col = iconIndex % 8;
+        int row = iconIndex / 8;
 
-            int iconIndex = potion.getStatusIconIndex();
-            int iconU = (iconIndex % 8) * 18;
-            int iconV = 198 + (iconIndex / 8) * 18;
+        int u = col * 18;
+        int v = 198 + row * 18;
 
-            float s  = 256f;
-            float u0 = iconU / s;
-            float v0 = iconV / s;
-            float u1 = (iconU + 18) / s;
-            float v1 = (iconV + 18) / s;
+        GlStateManager.color(1f, 1f, 1f, 1f);
+        GlStateManager.enableBlend();
+        mc.getTextureManager().bindTexture(INVENTORY_TEXTURE);
 
-            GL11.glBegin(GL11.GL_QUADS);
-            GL11.glTexCoord2f(u0, v0); GL11.glVertex2f(x,             y);
-            GL11.glTexCoord2f(u1, v0); GL11.glVertex2f(x + ICON_SIZE, y);
-            GL11.glTexCoord2f(u1, v1); GL11.glVertex2f(x + ICON_SIZE, y + ICON_SIZE);
-            GL11.glTexCoord2f(u0, v1); GL11.glVertex2f(x,             y + ICON_SIZE);
-            GL11.glEnd();
+        // drawTexturedModalRect(x, y, u, v, width, height)
+        Gui gui = new Gui();
+        gui.drawTexturedModalRect(x, y, u, v, ICON_SIZE, ICON_SIZE);
 
-            GL11.glDisable(GL11.GL_BLEND);
-        } catch (Exception ignored) {}
+        GlStateManager.disableBlend();
     }
 
     // -------------------------------------------------------------------------
@@ -194,8 +186,7 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         options.clear();
         for (PotionEffect effect : effects) {
             int id = effect.getPotionID();
-            Potion potion = Potion.potionTypes[id];
-            if (potion == null) continue;
+            if (Potion.potionTypes[id] == null) continue;
             String name = POTION_NAMES.getOrDefault(id, "Effect " + id);
             options.add(new EffectToggleOption(name, id, effectFilter.getOrDefault(id, true)));
         }
