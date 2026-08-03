@@ -6,8 +6,11 @@ import com.tesseract.event.events.EventRender2D;
 import com.tesseract.event.events.EventRenderTick;
 import com.tesseract.event.events.EventTick;
 import com.tesseract.gui.TesseractMainMenu;
+import com.tesseract.gui.TesseractMultiplayer;
+import com.tesseract.gui.TesseractOptions;
+import com.tesseract.gui.TesseractWorldSelect;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiMainMenu;
+import net.minecraft.client.gui.*;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
@@ -19,26 +22,27 @@ public class ForgeEventListener {
 
     private final Minecraft mc = Minecraft.getMinecraft();
 
-    // -------------------------------------------------------------------------
-    // Substitui GuiMainMenu vanilla pelo TesseractMainMenu
-
     @SubscribeEvent
     public void onGuiOpen(GuiOpenEvent event) {
         if (event.gui instanceof GuiMainMenu) {
             event.gui = new TesseractMainMenu();
+        } else if (event.gui instanceof GuiSelectWorld
+                && !(event.gui instanceof TesseractWorldSelect)) {
+            event.gui = new TesseractWorldSelect(new TesseractMainMenu());
+        } else if (event.gui instanceof GuiMultiplayer
+                && !(event.gui instanceof TesseractMultiplayer)) {
+            event.gui = new TesseractMultiplayer(new TesseractMainMenu());
+        } else if (event.gui instanceof GuiOptions
+                && !(event.gui instanceof TesseractOptions)) {
+            event.gui = new TesseractOptions(new TesseractMainMenu());
         }
     }
-
-    // -------------------------------------------------------------------------
 
     @SubscribeEvent
     public void onTick(TickEvent.ClientTickEvent event) {
         if (mc.theWorld == null) return;
-
         EventTick.Phase phase = event.phase == TickEvent.Phase.START
-                ? EventTick.Phase.PRE
-                : EventTick.Phase.POST;
-
+                ? EventTick.Phase.PRE : EventTick.Phase.POST;
         Tesseract.instance().getEventBus().post(new EventTick(phase));
     }
 
@@ -46,7 +50,6 @@ public class ForgeEventListener {
     public void onRenderHUD(RenderGameOverlayEvent.Post event) {
         if (event.type != RenderGameOverlayEvent.ElementType.TEXT) return;
         if (mc.theWorld == null) return;
-
         ScaledResolution res = new ScaledResolution(mc);
         Tesseract.instance().getEventBus().post(new EventRender2D(res, event.partialTicks));
     }
