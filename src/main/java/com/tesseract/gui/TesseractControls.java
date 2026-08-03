@@ -23,14 +23,15 @@ public class TesseractControls extends GuiScreen {
     private final float[] pvx = new float[PC], pvy = new float[PC];
     private final float[] pa = new float[PC], ps = new float[PC];
 
-    private static final int BTN_W = 150, BTN_H = 20, GAP = 4;
-    private static final int CAT_W = 80, NAME_W = 110, BIND_W = 100;
-    private static final int SCROLL_W = CAT_W + 4 + NAME_W + 4 + BIND_W; // 298
+    private static final int BTN_W = 150, BTN_H = 22, GAP = 3;
+    private static final int CAT_W = 90, NAME_W = 160, BIND_W = 110;
+    private static final int SCROLL_W = CAT_W + 8 + NAME_W + 8 + BIND_W; // 376
     private static final int VISIBLE_ROWS = 12;
 
     private KeyBinding waitingForKey = null;
     private int scrollOffset = 0;
     private float[] bindHover;
+    private String lastCategory = "";
 
     public TesseractControls(GuiScreen parent, GameSettings settings) {
         this.parent = parent;
@@ -54,7 +55,7 @@ public class TesseractControls extends GuiScreen {
     }
 
     private int listX() { return width / 2 - SCROLL_W / 2; }
-    private int listY() { return 40; }
+    private int listY() { return 44; }
     private int listH() { return VISIBLE_ROWS * (BTN_H + GAP); }
 
     @Override
@@ -66,72 +67,114 @@ public class TesseractControls extends GuiScreen {
         int lx = listX(), ly = listY();
         KeyBinding[] keys = settings.keyBindings;
 
-        drawRect(lx - 2, ly - 2, lx + SCROLL_W + 2, ly + listH() + 2, 0x33000000);
+        // painel de fundo com borda elegante
+        drawRect(lx - 4, ly - 20, lx + SCROLL_W + 4, ly + listH() + 4, 0x22000000);
+        drawBorder(lx - 4, ly - 20, lx + SCROLL_W + 4, ly + listH() + 4, 0x55378ADD);
 
-        // cabeçalhos das colunas
-        mc.fontRendererObj.drawString("Category", lx, ly - 12, 0x66C8D8F0);
-        mc.fontRendererObj.drawString("Action", lx + CAT_W + 4, ly - 12, 0x66C8D8F0);
-        mc.fontRendererObj.drawString("Key", lx + CAT_W + 4 + NAME_W + 4, ly - 12, 0x66C8D8F0);
+        // cabeçalho das colunas
+        drawRect(lx - 4, ly - 20, lx + SCROLL_W + 4, ly - 4, 0x44378ADD);
+        mc.fontRendererObj.drawString("CATEGORY", lx + 4, ly - 14, 0xAA85B7EB);
+        mc.fontRendererObj.drawString("ACTION",   lx + CAT_W + 8 + NAME_W / 2 - 18, ly - 14, 0xAA85B7EB);
+        mc.fontRendererObj.drawString("KEY BIND", lx + CAT_W + 8 + NAME_W + 8, ly - 14, 0xAA85B7EB);
 
+        lastCategory = "";
         for (int i = 0; i < VISIBLE_ROWS && (i + scrollOffset) < keys.length; i++) {
             int idx = i + scrollOffset;
             KeyBinding kb = keys[idx];
             int ry = ly + i * (BTN_H + GAP);
 
-            // categoria traduzida e truncada
             String cat = StatCollector.translateToLocal(kb.getKeyCategory());
-            cat = mc.fontRendererObj.trimStringToWidth(cat, CAT_W - 4);
-            mc.fontRendererObj.drawString(cat, lx, ry + BTN_H / 2 - 3, 0x66C8D8F0);
+            boolean newCat = !cat.equals(lastCategory);
+            lastCategory = cat;
 
-            // nome da ação traduzido
+            // linha de fundo alternada
+            if (i % 2 == 0) drawRect(lx - 4, ry, lx + SCROLL_W + 4, ry + BTN_H, 0x11FFFFFF);
+
+            // categoria — destaque se mudou
+            int catColor = newCat ? 0xCC85B7EB : 0x55C8D8F0;
+            if (newCat) {
+                // linha divisória de categoria
+                drawRect(lx - 4, ry, lx + SCROLL_W + 4, ry + 1, 0x33378ADD);
+            }
+            String catTrim = mc.fontRendererObj.trimStringToWidth(cat, CAT_W - 4);
+            mc.fontRendererObj.drawString(catTrim, lx + 4, ry + BTN_H / 2 - 3, catColor);
+
+            // divisor vertical
+            drawRect(lx + CAT_W + 4, ry + 2, lx + CAT_W + 5, ry + BTN_H - 2, 0x33378ADD);
+
+            // nome da ação
             String keyName = StatCollector.translateToLocal(kb.getKeyDescription());
+            boolean hovName = mouseX >= lx + CAT_W + 8 && mouseX <= lx + CAT_W + 8 + NAME_W
+                    && mouseY >= ry && mouseY <= ry + BTN_H;
+            int nameBx = lx + CAT_W + 8;
+            if (hovName) drawRect(nameBx - 2, ry + 1, nameBx + NAME_W + 2, ry + BTN_H - 1, 0x1185B7EB);
             keyName = mc.fontRendererObj.trimStringToWidth(keyName, NAME_W - 4);
-            int nameBx = lx + CAT_W + 4;
-            drawSmallRect(nameBx, ry, nameBx + NAME_W, ry + BTN_H);
             int lw = mc.fontRendererObj.getStringWidth(keyName);
-            mc.fontRendererObj.drawString(keyName, nameBx + NAME_W / 2 - lw / 2, ry + BTN_H / 2 - 3, 0xCCC8D8F0);
+            mc.fontRendererObj.drawString(keyName, nameBx + NAME_W / 2 - lw / 2, ry + BTN_H / 2 - 3,
+                    hovName ? 0xFFFFFFFF : 0xCCC8D8F0);
+
+            // divisor vertical 2
+            drawRect(lx + CAT_W + 8 + NAME_W + 4, ry + 2, lx + CAT_W + 8 + NAME_W + 5, ry + BTN_H - 2, 0x33378ADD);
 
             // botão de bind
             int keyCode = kb.getKeyCode();
-            String bindLabel = waitingForKey == kb ? "> Press Key <"
+            String bindLabel = waitingForKey == kb ? "> PRESS KEY <"
                     : (keyCode <= 0 ? "NONE" : Keyboard.getKeyName(keyCode));
             boolean conflict = isConflict(kb);
-            int bindBx = lx + CAT_W + 4 + NAME_W + 4;
-            int bindColor = waitingForKey == kb ? 0xFF4A8AFF : (conflict ? 0xFF8A2222 : 0xFF1A4A8A);
-            drawBindBtn(bindBx, ry, bindLabel, bindColor, idx + keys.length, mouseX, mouseY);
+            int bindBx = lx + CAT_W + 8 + NAME_W + 8;
+            int bindBgColor = waitingForKey == kb ? 0xFF2A5AAA
+                    : (conflict ? 0xFF6A1A1A : 0xFF0A2A4A);
+            int bindBorderColor = waitingForKey == kb ? 0xFF85B7EB
+                    : (conflict ? 0xFFAA4444 : 0xFF378ADD);
+            drawBindBtn(bindBx, ry, bindLabel, bindBgColor, bindBorderColor, idx + keys.length, mouseX, mouseY);
         }
 
-        // scrollbar
+        // scrollbar estilizada
         if (keys.length > VISIBLE_ROWS) {
+            int sbX = lx + SCROLL_W + 8;
             int sbH = listH();
-            int thumbH = Math.max(20, sbH * VISIBLE_ROWS / keys.length);
-            int thumbY = ly + (sbH - thumbH) * scrollOffset / (keys.length - VISIBLE_ROWS);
-            drawRect(lx + SCROLL_W + 4, ly, lx + SCROLL_W + 8, ly + sbH, 0x44378ADD);
-            drawRect(lx + SCROLL_W + 4, thumbY, lx + SCROLL_W + 8, thumbY + thumbH, 0xAA85B7EB);
+            int thumbH = Math.max(24, sbH * VISIBLE_ROWS / keys.length);
+            int thumbY = ly + (sbH - thumbH) * scrollOffset / Math.max(1, keys.length - VISIBLE_ROWS);
+            // trilho
+            drawRect(sbX, ly, sbX + 4, ly + sbH, 0x22378ADD);
+            drawBorder(sbX, ly, sbX + 4, ly + sbH, 0x33378ADD);
+            // thumb
+            drawRect(sbX, thumbY, sbX + 4, thumbY + thumbH, 0xAA85B7EB);
+            drawRect(sbX + 1, thumbY + 1, sbX + 3, thumbY + thumbH - 1, 0x55FFFFFF);
         }
 
         // botões Reset All e Done
-        int btnY = listY() + listH() + GAP * 2;
+        int btnY = listY() + listH() + GAP * 3;
         drawStyledBtn(lx, btnY, "Reset All", bindHover.length - 2, mouseX, mouseY);
         drawStyledBtn(lx + SCROLL_W - BTN_W, btnY, "Done", bindHover.length - 1, mouseX, mouseY);
 
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
-    private void drawSmallRect(int bx, int by, int ex, int ey) {
-        drawRect(bx, by, ex, ey, 0x33378ADD);
-        drawBorder(bx, by, ex, ey, 0x4485B7EB);
-    }
-
-    private void drawBindBtn(int bx, int by, String label, int bgColor, int idx, int mouseX, int mouseY) {
+    private void drawBindBtn(int bx, int by, String label, int bgColor, int borderColor, int idx, int mouseX, int mouseY) {
         if (idx < 0 || idx >= bindHover.length) return;
         boolean hov = mouseX >= bx && mouseX <= bx + BIND_W && mouseY >= by && mouseY <= by + BTN_H;
         bindHover[idx] = hov ? Math.min(1f, bindHover[idx] + 0.1f) : Math.max(0f, bindHover[idx] - 0.07f);
         float ha = bindHover[idx];
-        drawRect(bx, by, bx + BIND_W, by + BTN_H, (bgColor & 0x00FFFFFF) | ((int)(0x55 + ha * 0x44) << 24));
-        drawBorder(bx, by, bx + BIND_W, by + BTN_H, ((int)(0x44 + ha * 0x44) << 24) | 0x85B7EB);
+
+        // sombra
+        drawRect(bx + 2, by + 2, bx + BIND_W + 2, by + BTN_H + 2, 0x33000000);
+        // fundo
+        drawRect(bx, by, bx + BIND_W, by + BTN_H,
+                (bgColor & 0x00FFFFFF) | ((int)(0x88 + ha * 0x44) << 24));
+        // brilho no topo
+        drawRect(bx + 1, by + 1, bx + BIND_W - 1, by + 3, 0x11FFFFFF);
+        // borda
+        drawBorder(bx, by, bx + BIND_W, by + BTN_H,
+                (borderColor & 0x00FFFFFF) | ((int)(0x88 + ha * 0x44) << 24));
+        // accent left
+        if (ha > 0f) drawRect(bx, by, bx + 2, by + BTN_H, ((int)(ha * 0xFF) << 24) | 0x85B7EB);
+
         int lw = mc.fontRendererObj.getStringWidth(label);
-        mc.fontRendererObj.drawString(label, bx + BIND_W / 2 - lw / 2, by + BTN_H / 2 - 3, ((int)(0xAA + ha * 0x55) << 24) | 0xC8D8F0);
+        // sombra do texto
+        mc.fontRendererObj.drawString(label, bx + BIND_W / 2 - lw / 2 + 1, by + BTN_H / 2 - 2, 0x44000000);
+        mc.fontRendererObj.drawString(label, bx + BIND_W / 2 - lw / 2, by + BTN_H / 2 - 3,
+                ((int)(0xBB + ha * 0x44) << 24) | 0xC8D8F0);
     }
 
     private void drawStyledBtn(int bx, int by, String label, int idx, int mouseX, int mouseY) {
@@ -139,11 +182,20 @@ public class TesseractControls extends GuiScreen {
         boolean hov = mouseX >= bx && mouseX <= bx + BTN_W && mouseY >= by && mouseY <= by + BTN_H;
         bindHover[idx] = hov ? Math.min(1f, bindHover[idx] + 0.1f) : Math.max(0f, bindHover[idx] - 0.07f);
         float ha = bindHover[idx];
+        // sombra
+        drawRect(bx + 2, by + 2, bx + BTN_W + 2, by + BTN_H + 2, 0x33000000);
+        // accent left
         if (ha > 0f) drawRect(bx - 2, by, bx, by + BTN_H, ((int)(ha * 0xFF) << 24) | 0x85B7EB);
-        drawRect(bx, by, bx + BTN_W, by + BTN_H, ((int)(0x22 + ha * 0x33) << 24) | 0x378ADD);
-        drawBorder(bx, by, bx + BTN_W, by + BTN_H, ((int)(0x44 + ha * 0x44) << 24) | 0x85B7EB);
+        // fundo
+        drawRect(bx, by, bx + BTN_W, by + BTN_H, ((int)(0x33 + ha * 0x44) << 24) | 0x378ADD);
+        // brilho
+        drawRect(bx + 1, by + 1, bx + BTN_W - 1, by + 3, 0x11FFFFFF);
+        // borda
+        drawBorder(bx, by, bx + BTN_W, by + BTN_H, ((int)(0x55 + ha * 0x55) << 24) | 0x85B7EB);
         int lw = mc.fontRendererObj.getStringWidth(label);
-        mc.fontRendererObj.drawString(label, bx + BTN_W / 2 - lw / 2, by + BTN_H / 2 - 3, ((int)(0xAA + ha * 0x55) << 24) | 0xC8D8F0);
+        mc.fontRendererObj.drawString(label, bx + BTN_W / 2 - lw / 2 + 1, by + BTN_H / 2 - 2, 0x44000000);
+        mc.fontRendererObj.drawString(label, bx + BTN_W / 2 - lw / 2, by + BTN_H / 2 - 3,
+                ((int)(0xAA + ha * 0x55) << 24) | 0xC8D8F0);
     }
 
     @Override
@@ -151,7 +203,7 @@ public class TesseractControls extends GuiScreen {
         if (mouseButton != 0) return;
         KeyBinding[] keys = settings.keyBindings;
         int lx = listX(), ly = listY();
-        int bindBx = lx + CAT_W + 4 + NAME_W + 4;
+        int bindBx = lx + CAT_W + 8 + NAME_W + 8;
 
         for (int i = 0; i < VISIBLE_ROWS && (i + scrollOffset) < keys.length; i++) {
             int idx = i + scrollOffset;
@@ -161,7 +213,7 @@ public class TesseractControls extends GuiScreen {
             }
         }
 
-        int btnY = listY() + listH() + GAP * 2;
+        int btnY = listY() + listH() + GAP * 3;
         if (hit(mouseX, mouseY, lx, btnY)) {
             for (KeyBinding kb : keys) kb.setKeyCode(kb.getKeyCodeDefault());
             KeyBinding.resetKeyBindingArrayAndHash();
