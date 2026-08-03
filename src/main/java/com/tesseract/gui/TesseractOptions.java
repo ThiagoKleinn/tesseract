@@ -132,14 +132,14 @@ public class TesseractOptions extends GuiScreen {
 
     private void openSubScreen(String label) {
         switch (label) {
-            case "Skin Customization...":  mc.displayGuiScreen(new GuiCustomizeSkin(this)); break;
-            case "Music & Sounds...":      mc.displayGuiScreen(new GuiScreenOptionsSounds(this, settings)); break;
-            case "Video Settings...":      mc.displayGuiScreen(new GuiVideoSettings(this, settings)); break;
-            case "Controls...":            mc.displayGuiScreen(new GuiControls(this, settings)); break;
-            case "Language...":            mc.displayGuiScreen(new GuiLanguage(this, settings, mc.getLanguageManager())); break;
-            case "Chat Settings...": mc.displayGuiScreen(new TesseractChatOptions(this, settings)); break;
-            case "Resource Packs...":      mc.displayGuiScreen(new GuiScreenResourcePacks(this)); break;
-            case "Snooper Settings...":    mc.displayGuiScreen(new GuiSnooper(this, settings)); break;
+            case "Skin Customization...":    mc.displayGuiScreen(new TesseractSkinCustomization(this)); break;
+            case "Music & Sounds...":        mc.displayGuiScreen(new TesseractSounds(this, settings)); break;
+            case "Video Settings...":        mc.displayGuiScreen(new TesseractVideoSettings(this, settings)); break;
+            case "Controls...":              mc.displayGuiScreen(new TesseractControls(this, settings)); break;
+            case "Language...":              mc.displayGuiScreen(new TesseractLanguage(this, settings, mc.getLanguageManager())); break;
+            case "Chat Settings...":         mc.displayGuiScreen(new TesseractChatOptions(this, settings)); break;
+            case "Resource Packs...":        mc.displayGuiScreen(new TesseractResourcePacks(this)); break;
+            case "Snooper Settings...":      mc.displayGuiScreen(new TesseractSnooper(this, settings)); break;
             case "Super Secret Settings...":
             case "Broadcast Settings...":
             default: break;
