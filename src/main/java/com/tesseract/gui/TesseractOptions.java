@@ -137,7 +137,7 @@ public class TesseractOptions extends GuiScreen {
             case "Video Settings...":      mc.displayGuiScreen(new GuiVideoSettings(this, settings)); break;
             case "Controls...":            mc.displayGuiScreen(new GuiControls(this, settings)); break;
             case "Language...":            mc.displayGuiScreen(new GuiLanguage(this, settings, mc.getLanguageManager())); break;
-            case "Chat Settings...":       mc.displayGuiScreen(new GuiChat()); break;
+            case "Chat Settings...": mc.displayGuiScreen(new TesseractChatOptions(this, settings)); break;
             case "Resource Packs...":      mc.displayGuiScreen(new GuiScreenResourcePacks(this)); break;
             case "Snooper Settings...":    mc.displayGuiScreen(new GuiSnooper(this, settings)); break;
             case "Super Secret Settings...":
