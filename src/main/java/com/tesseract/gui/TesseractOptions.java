@@ -3,6 +3,7 @@ package com.tesseract.gui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.*;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.settings.GameSettings;
 
 import java.io.IOException;
 import java.util.Random;
@@ -10,7 +11,7 @@ import java.util.Random;
 public class TesseractOptions extends GuiScreen {
 
     private final GuiScreen parent;
-    private final net.minecraft.client.settings.GameSettings settings;
+    private final GameSettings settings;
 
     private float tick = 0f;
     private static final int SC = 80, PC = 18;
@@ -20,18 +21,19 @@ public class TesseractOptions extends GuiScreen {
     private final float[] pvx = new float[PC], pvy = new float[PC];
     private final float[] pa = new float[PC], ps = new float[PC];
 
-    // Botões da tela de options
+    // Igual ao vanilla: FOV + Realms na primeira linha, depois 5 linhas de 2 botões, depois Done
+    // Índices: 0=FOV, 1=Realms, 2..11=opções, 12=Done
     private static final String[][] BUTTONS = {
-            {"Skin Customization...", "Music & Sounds..."},
-            {"Video Settings...",     "Controls..."},
-            {"Language...",           "Chat Settings..."},
-            {"Resource Packs...",     "Snooper Settings..."},
+            {"Skin Customization...",   "Super Secret Settings..."},
+            {"Music & Sounds...",       "Broadcast Settings..."},
+            {"Video Settings...",       "Controls..."},
+            {"Language...",             "Chat Settings..."},
+            {"Resource Packs...",       "Snooper Settings..."},
     };
     private static final int BTN_W = 150, BTN_H = 20, BTN_GAP = 4;
 
-    // Hover animado
-    private final float[] btnHover = new float[11];
-    private int hoveredBtn = -1;
+    // 0=FOV, 1=Realms, 2-11=botões, 12=Done → total 13
+    private final float[] btnHover = new float[13];
 
     public TesseractOptions(GuiScreen parent) {
         this.parent   = parent;
@@ -47,41 +49,31 @@ public class TesseractOptions extends GuiScreen {
         tick += 0.012f;
         drawBg(); drawAurora(); drawStars(); drawParticles();
         drawHeader("OPTIONS");
-        drawFovSlider(mouseX, mouseY);
-        drawOptionButtons(mouseX, mouseY);
-        drawDoneButton(mouseX, mouseY);
-        super.drawScreen(mouseX, mouseY, partialTicks);
-    }
 
-    private void drawFovSlider(int mouseX, int mouseY) {
-        // FOV slider simples no topo
-        int sx2 = width / 2 - BTN_W - BTN_GAP / 2;
-        int sy2 = 40;
-        String fovLabel = "FOV: " + (int) settings.fovSetting;
-        drawStyledButton(sx2, sy2, BTN_W, BTN_H, fovLabel, 0, mouseX, mouseY);
-        // Realms notifications
-        String realmsLabel = "Realms: " + (settings.enableVsync ? "ON" : "OFF");
-        drawStyledButton(sx2 + BTN_W + BTN_GAP, sy2, BTN_W, BTN_H, realmsLabel, 1, mouseX, mouseY);
-    }
-
-    private void drawOptionButtons(int mouseX, int mouseY) {
         int startX = width / 2 - BTN_W - BTN_GAP / 2;
-        int startY = 70;
+        int firstY = 40;
+
+        // Linha 1: FOV + Realms Notifications
+        String fovLabel   = "FOV: " + (int) settings.fovSetting;
+        String realmsLabel = "Realms Notifications: " + (settings.enableVsync ? "ON" : "OFF");
+        drawStyledButton(startX,              firstY, BTN_W, BTN_H, fovLabel,    0, mouseX, mouseY);
+        drawStyledButton(startX + BTN_W + BTN_GAP, firstY, BTN_W, BTN_H, realmsLabel, 1, mouseX, mouseY);
+
+        // Linhas 2-6: botões de opção
         int idx = 2;
-        for (String[] row : BUTTONS) {
-            for (int col = 0; col < row.length; col++) {
+        for (int row = 0; row < BUTTONS.length; row++) {
+            int by = firstY + (row + 1) * (BTN_H + BTN_GAP);
+            for (int col = 0; col < BUTTONS[row].length; col++) {
                 int bx = startX + col * (BTN_W + BTN_GAP);
-                int by = startY + (idx - 2) / 2 * (BTN_H + BTN_GAP);
-                drawStyledButton(bx, by, BTN_W, BTN_H, row[col], idx, mouseX, mouseY);
-                idx++;
+                drawStyledButton(bx, by, BTN_W, BTN_H, BUTTONS[row][col], idx++, mouseX, mouseY);
             }
         }
-    }
 
-    private void drawDoneButton(int mouseX, int mouseY) {
-        int bx = width / 2 - BTN_W / 2;
-        int by = 70 + BUTTONS.length * (BTN_H + BTN_GAP) + 4;
-        drawStyledButton(bx, by, BTN_W, BTN_H, "Done", 10, mouseX, mouseY);
+        // Done
+        int doneY = firstY + (BUTTONS.length + 1) * (BTN_H + BTN_GAP);
+        drawStyledButton(width / 2 - BTN_W / 2, doneY, BTN_W, BTN_H, "Done", 12, mouseX, mouseY);
+
+        super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
     private void drawStyledButton(int bx, int by, int bw, int bh, String label, int idx, int mouseX, int mouseY) {
@@ -103,43 +95,53 @@ public class TesseractOptions extends GuiScreen {
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         if (mouseButton != 0) return;
 
-        // Done
-        int doneX = width / 2 - BTN_W / 2;
-        int doneY = 70 + BUTTONS.length * (BTN_H + BTN_GAP) + 4;
-        if (mouseX >= doneX && mouseX <= doneX + BTN_W && mouseY >= doneY && mouseY <= doneY + BTN_H) {
-            mc.displayGuiScreen(parent);
+        int startX = width / 2 - BTN_W - BTN_GAP / 2;
+        int firstY = 40;
+
+        // FOV — sem ação por enquanto (precisaria de slider)
+        // Realms Notifications — toggle enableVsync como placeholder
+        int realmsX = startX + BTN_W + BTN_GAP;
+        if (mouseX >= realmsX && mouseX <= realmsX + BTN_W
+                && mouseY >= firstY && mouseY <= firstY + BTN_H) {
+            settings.enableVsync = !settings.enableVsync;
+            settings.saveOptions();
             return;
         }
 
-        // Sub-telas
-        int startX = width / 2 - BTN_W - BTN_GAP / 2;
-        int startY = 70;
+        // Botões de opção
         int idx = 0;
-        for (String[] row : BUTTONS) {
-            for (int col = 0; col < row.length; col++) {
+        for (int row = 0; row < BUTTONS.length; row++) {
+            int by = firstY + (row + 1) * (BTN_H + BTN_GAP);
+            for (int col = 0; col < BUTTONS[row].length; col++) {
                 int bx = startX + col * (BTN_W + BTN_GAP);
-                int by = startY + idx / 2 * (BTN_H + BTN_GAP);
                 if (mouseX >= bx && mouseX <= bx + BTN_W && mouseY >= by && mouseY <= by + BTN_H) {
-                    openSubScreen(row[col]);
+                    openSubScreen(BUTTONS[row][col]);
                     return;
                 }
                 idx++;
             }
         }
+
+        // Done
+        int doneY = firstY + (BUTTONS.length + 1) * (BTN_H + BTN_GAP);
+        int doneX = width / 2 - BTN_W / 2;
+        if (mouseX >= doneX && mouseX <= doneX + BTN_W && mouseY >= doneY && mouseY <= doneY + BTN_H) {
+            mc.displayGuiScreen(parent);
+        }
     }
 
     private void openSubScreen(String label) {
         switch (label) {
-            case "Video Settings...":        mc.displayGuiScreen(new GuiVideoSettings(this, settings)); break;
-            case "Controls...":              mc.displayGuiScreen(new GuiControls(this, settings)); break;
-            case "Language...":              mc.displayGuiScreen(new GuiLanguage(this, settings, mc.getLanguageManager())); break;
-            case "Music & Sounds...":  mc.displayGuiScreen(new GuiScreenOptionsSounds(this, settings)); break;
-            case "Chat Settings...": mc.displayGuiScreen(new GuiChat()); break;
-            case "Resource Packs...":        mc.displayGuiScreen(new GuiScreenResourcePacks(this)); break;
-            case "Skin Customization...":    mc.displayGuiScreen(new GuiCustomizeSkin(this)); break;
-            case "Snooper Settings...":      mc.displayGuiScreen(new GuiSnooper(this, settings)); break;
-            // case "Broadcast Settings...": not available in 1.8.9
-            // case "Super Secret Settings...": not available in 1.8.9
+            case "Skin Customization...":  mc.displayGuiScreen(new GuiCustomizeSkin(this)); break;
+            case "Music & Sounds...":      mc.displayGuiScreen(new GuiScreenOptionsSounds(this, settings)); break;
+            case "Video Settings...":      mc.displayGuiScreen(new GuiVideoSettings(this, settings)); break;
+            case "Controls...":            mc.displayGuiScreen(new GuiControls(this, settings)); break;
+            case "Language...":            mc.displayGuiScreen(new GuiLanguage(this, settings, mc.getLanguageManager())); break;
+            case "Chat Settings...":       mc.displayGuiScreen(new GuiChat()); break;
+            case "Resource Packs...":      mc.displayGuiScreen(new GuiScreenResourcePacks(this)); break;
+            case "Snooper Settings...":    mc.displayGuiScreen(new GuiSnooper(this, settings)); break;
+            case "Super Secret Settings...":
+            case "Broadcast Settings...":
             default: break;
         }
     }
@@ -149,7 +151,6 @@ public class TesseractOptions extends GuiScreen {
         if (keyCode == org.lwjgl.input.Keyboard.KEY_ESCAPE) mc.displayGuiScreen(parent);
     }
 
-    // Fundo cósmico
     private void drawBg() {
         for (int i = 0; i < height; i++) {
             float t = (float) i / height;
