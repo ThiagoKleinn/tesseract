@@ -81,7 +81,7 @@ public class TesseractOptions extends GuiScreen {
     private void drawDoneButton(int mouseX, int mouseY) {
         int bx = width / 2 - BTN_W / 2;
         int by = 70 + BUTTONS.length * (BTN_H + BTN_GAP) + 4;
-        drawStyledButton(bx, by, BTN_W, BTN_H, "Done", 11, mouseX, mouseY);
+        drawStyledButton(bx, by, BTN_W, BTN_H, "Done", 10, mouseX, mouseY);
     }
 
     private void drawStyledButton(int bx, int by, int bw, int bh, String label, int idx, int mouseX, int mouseY) {
