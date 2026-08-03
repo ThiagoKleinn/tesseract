@@ -80,7 +80,9 @@ public class TesseractControls extends GuiScreen {
             drawSmallRect(nameBx, ry, nameBx + 95, ry + BTN_H);
             mc.fontRendererObj.drawString(keyName, nameBx + 48 - lw / 2, ry + BTN_H / 2 - 3, 0xCCC8D8F0);
 
-            String bindLabel = waitingForKey == kb ? "> Press Key <" : Keyboard.getKeyName(kb.getKeyCode());
+            int keyCode = kb.getKeyCode();
+            String bindLabel = waitingForKey == kb ? "> Press Key <"
+                    : (keyCode <= 0 ? "NONE" : Keyboard.getKeyName(keyCode));
             boolean conflict = isConflict(kb);
             int bindBx = lx + 210;
             int bindColor = waitingForKey == kb ? 0xFF4A8AFF : (conflict ? 0xFF8A2222 : 0xFF1A4A8A);
