@@ -1,0 +1,214 @@
+package com.tesseract.gui;
+
+import net.minecraft.client.gui.*;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.resources.ResourcePackListEntry;
+import net.minecraft.client.resources.ResourcePackListEntryDefault;
+import net.minecraft.client.resources.ResourcePackListEntryFound;
+import net.minecraft.client.resources.ResourcePackRepository;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+
+public class TesseractResourcePacks extends GuiScreen {
+
+    private final GuiScreen parent;
+    private float tick = 0f;
+
+    private static final int SC = 80, PC = 18;
+    private final int[]   sx = new int[SC], sy = new int[SC], ss = new int[SC];
+    private final float[] sp = new float[SC], sa = new float[SC];
+    private final float[] px = new float[PC], py = new float[PC];
+    private final float[] pvx = new float[PC], pvy = new float[PC];
+    private final float[] pa = new float[PC], ps = new float[PC];
+
+    private static final int COL_W = 148, ROW_H = 32, GAP = 4, VISIBLE = 9;
+    private final List<ResourcePackListEntry> available = new ArrayList<>();
+    private final List<ResourcePackListEntry> selected  = new ArrayList<>();
+    private int scrollAvail = 0, scrollSel = 0;
+    private final float[] hoverAvail = new float[64];
+    private final float[] hoverSel   = new float[64];
+    private final float[] btnHover   = new float[4];
+
+    public TesseractResourcePacks(GuiScreen parent) {
+        this.parent = parent;
+        initParticles();
+    }
+
+    private void initParticles() {
+        Random r = new Random(0xC05B1CL);
+        for (int i = 0; i < SC; i++) { sx[i]=r.nextInt(1000); sy[i]=r.nextInt(700); ss[i]=r.nextInt(3); sp[i]=0.1f+r.nextFloat()*0.3f; sa[i]=0.3f+r.nextFloat()*0.7f; }
+        Random p = new Random(0xDEADBEEFL);
+        for (int i = 0; i < PC; i++) { px[i]=p.nextFloat()*1000; py[i]=p.nextFloat()*700; pvx[i]=(p.nextFloat()-0.5f)*0.4f; pvy[i]=-0.1f-p.nextFloat()*0.2f; pa[i]=0.2f+p.nextFloat()*0.4f; ps[i]=1f+p.nextFloat()*2f; }
+    }
+
+    @Override
+    public void initGui() {
+        refreshLists();
+    }
+
+    private void refreshLists() {
+        available.clear(); selected.clear();
+        ResourcePackRepository repo = mc.getResourcePackRepository();
+        repo.updateRepositoryEntriesAll();
+
+        selected.add(new ResourcePackListEntryDefault(null));
+
+        for (ResourcePackRepository.Entry e : repo.getRepositoryEntries()) {
+            selected.add(new ResourcePackListEntryFound(null, e));
+        }
+        for (ResourcePackRepository.Entry e : repo.getRepositoryEntriesAll()) {
+            if (!repo.getRepositoryEntries().contains(e)) {
+                available.add(new ResourcePackListEntryFound(null, e));
+            }
+        }
+    }
+
+    private int lColX() { return width / 2 - COL_W - GAP; }
+    private int rColX() { return width / 2 + GAP; }
+    private int listY() { return 40; }
+
+    private String getPackName(ResourcePackListEntry entry) {
+        return entry.toString();
+    }
+
+    @Override
+    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+        tick += 0.012f;
+        drawBg(); drawAurora(); drawStars(); drawParticles();
+        drawHeader("RESOURCE PACKS");
+
+        int ly = listY(), lx = lColX(), rx = rColX();
+
+        drawColumnHeader(lx, ly - 14, "Available");
+        drawColumnHeader(rx, ly - 14, "Selected (top = highest priority)");
+
+        // available list
+        drawRect(lx, ly, lx + COL_W, ly + VISIBLE * (ROW_H + GAP), 0x33000000);
+        for (int i = 0; i < VISIBLE && (i + scrollAvail) < available.size(); i++) {
+            int idx = i + scrollAvail;
+            int ry = ly + i * (ROW_H + GAP);
+            boolean hov = mouseX >= lx && mouseX <= lx + COL_W && mouseY >= ry && mouseY <= ry + ROW_H;
+            hoverAvail[i] = hov ? Math.min(1f, hoverAvail[i] + 0.1f) : Math.max(0f, hoverAvail[i] - 0.07f);
+            float ha = hoverAvail[i];
+            drawRect(lx, ry, lx + COL_W, ry + ROW_H, ((int)(0x11 + ha * 0x22) << 24) | 0x1A4A8A);
+            drawBorder(lx, ry, lx + COL_W, ry + ROW_H, ((int)(0x33 + ha * 0x33) << 24) | 0x85B7EB);
+            String name = getPackName(available.get(idx));
+            if (mc.fontRendererObj.getStringWidth(name) > COL_W - 8) name = mc.fontRendererObj.trimStringToWidth(name, COL_W - 14) + "...";
+            mc.fontRendererObj.drawString(name, lx + 4, ry + ROW_H / 2 - 3, ((int)(0x88 + ha * 0x44) << 24) | 0xC8D8F0);
+            if (hov) { String hint = "> Click to enable"; int lw = mc.fontRendererObj.getStringWidth(hint); mc.fontRendererObj.drawString(hint, lx + COL_W / 2 - lw / 2, ry + ROW_H - 9, 0x6685B7EB); }
+        }
+
+        // selected list
+        drawRect(rx, ly, rx + COL_W, ly + VISIBLE * (ROW_H + GAP), 0x33000000);
+        for (int i = 0; i < VISIBLE && (i + scrollSel) < selected.size(); i++) {
+            int idx = i + scrollSel;
+            int ry = ly + i * (ROW_H + GAP);
+            boolean hov = mouseX >= rx && mouseX <= rx + COL_W && mouseY >= ry && mouseY <= ry + ROW_H;
+            hoverSel[i] = hov ? Math.min(1f, hoverSel[i] + 0.1f) : Math.max(0f, hoverSel[i] - 0.07f);
+            float ha = hoverSel[i];
+            boolean isDefault = (selected.get(idx) instanceof ResourcePackListEntryDefault);
+            int bg = isDefault ? (0x55378ADD | ((int)(0x44 + ha * 0x22) << 24)) : ((int)(0x11 + ha * 0x22) << 24) | 0x1A4A8A;
+            drawRect(rx, ry, rx + COL_W, ry + ROW_H, bg);
+            drawBorder(rx, ry, rx + COL_W, ry + ROW_H, ((int)(0x44 + ha * 0x33) << 24) | 0x85B7EB);
+            String name = getPackName(selected.get(idx));
+            if (mc.fontRendererObj.getStringWidth(name) > COL_W - 8) name = mc.fontRendererObj.trimStringToWidth(name, COL_W - 14) + "...";
+            mc.fontRendererObj.drawString(name, rx + 4, ry + ROW_H / 2 - 3, isDefault ? 0xAAFFFFFF : ((int)(0x88 + ha * 0x44) << 24) | 0xC8D8F0);
+            if (hov && !isDefault) { String hint = "> Click to disable"; int lw = mc.fontRendererObj.getStringWidth(hint); mc.fontRendererObj.drawString(hint, rx + COL_W / 2 - lw / 2, ry + ROW_H - 9, 0x6685B7EB); }
+        }
+
+        int doneY = listY() + VISIBLE * (ROW_H + GAP) + GAP * 2;
+        drawStyledBtn(width / 2 - 75, doneY, "Done", 0, mouseX, mouseY);
+        drawStyledBtn(width / 2 - 75 - 80, doneY, "Open Folder", 1, mouseX, mouseY);
+
+        super.drawScreen(mouseX, mouseY, partialTicks);
+    }
+
+    private void drawColumnHeader(int bx, int by, String label) {
+        int lw = mc.fontRendererObj.getStringWidth(label);
+        mc.fontRendererObj.drawString(label, bx + COL_W / 2 - lw / 2, by + 2, 0x88C8D8F0);
+    }
+
+    private void drawStyledBtn(int bx, int by, String label, int idx, int mouseX, int mouseY) {
+        boolean hov = mouseX >= bx && mouseX <= bx + 150 && mouseY >= by && mouseY <= by + 20;
+        btnHover[idx] = hov ? Math.min(1f, btnHover[idx] + 0.1f) : Math.max(0f, btnHover[idx] - 0.07f);
+        float ha = btnHover[idx];
+        if (ha > 0f) drawRect(bx - 2, by, bx, by + 20, ((int)(ha * 0xFF) << 24) | 0x85B7EB);
+        drawRect(bx, by, bx + 150, by + 20, ((int)(0x22 + ha * 0x33) << 24) | 0x378ADD);
+        drawBorder(bx, by, bx + 150, by + 20, ((int)(0x44 + ha * 0x44) << 24) | 0x85B7EB);
+        int lw = mc.fontRendererObj.getStringWidth(label);
+        mc.fontRendererObj.drawString(label, bx + 75 - lw / 2, by + 6, ((int)(0xAA + ha * 0x55) << 24) | 0xC8D8F0);
+    }
+
+    @Override
+    protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+        if (mouseButton != 0) return;
+        int ly = listY(), lx = lColX(), rx = rColX();
+
+        for (int i = 0; i < VISIBLE && (i + scrollAvail) < available.size(); i++) {
+            int ry = ly + i * (ROW_H + GAP);
+            if (mouseX >= lx && mouseX <= lx + COL_W && mouseY >= ry && mouseY <= ry + ROW_H) {
+                ResourcePackListEntry entry = available.remove(i + scrollAvail);
+                selected.add(1, entry);
+                applyPacks(); return;
+            }
+        }
+
+        for (int i = 0; i < VISIBLE && (i + scrollSel) < selected.size(); i++) {
+            int idx = i + scrollSel;
+            int ry = ly + i * (ROW_H + GAP);
+            if (mouseX >= rx && mouseX <= rx + COL_W && mouseY >= ry && mouseY <= ry + ROW_H) {
+                if (!(selected.get(idx) instanceof ResourcePackListEntryDefault)) {
+                    ResourcePackListEntry entry = selected.remove(idx);
+                    available.add(entry);
+                    applyPacks();
+                }
+                return;
+            }
+        }
+
+        int doneY = listY() + VISIBLE * (ROW_H + GAP) + GAP * 2;
+        if (mouseX >= width/2-75 && mouseX <= width/2+75 && mouseY >= doneY && mouseY <= doneY + 20) mc.displayGuiScreen(parent);
+        if (mouseX >= width/2-155 && mouseX <= width/2-5 && mouseY >= doneY && mouseY <= doneY + 20) {
+            try { java.awt.Desktop.getDesktop().open(mc.getResourcePackRepository().getDirResourcepacks()); } catch (Exception ignored) {}
+        }
+    }
+
+    private void applyPacks() {
+        List<ResourcePackRepository.Entry> toApply = new ArrayList<>();
+        for (ResourcePackListEntry e : selected) {
+            if (e instanceof ResourcePackListEntryFound) {
+                toApply.add(((ResourcePackListEntryFound) e).func_148318_i());
+            }
+        }
+        Collections.reverse(toApply);
+        mc.getResourcePackRepository().setRepositories(toApply);
+        mc.scheduleResourcesRefresh();
+    }
+
+    @Override
+    public void handleMouseInput() throws IOException {
+        super.handleMouseInput();
+        int scroll = org.lwjgl.input.Mouse.getEventDWheel();
+        if (scroll == 0) return;
+        int lx = lColX(), rx = rColX();
+        int mx = org.lwjgl.input.Mouse.getX() * width / mc.displayWidth;
+        if (mx >= lx && mx <= lx + COL_W) scrollAvail = Math.max(0, Math.min(available.size() - VISIBLE, scrollAvail - scroll / 120));
+        else if (mx >= rx && mx <= rx + COL_W) scrollSel = Math.max(0, Math.min(selected.size() - VISIBLE, scrollSel - scroll / 120));
+    }
+
+    @Override
+    protected void keyTyped(char c, int key) throws IOException { if (key == org.lwjgl.input.Keyboard.KEY_ESCAPE) mc.displayGuiScreen(parent); }
+
+    private void drawBg() { for (int i = 0; i < height; i++) { float t = (float)i/height; drawRect(0,i,width,i+1,0xFF000000|((int)(10+t*4)<<16)|((int)(17+t*6)<<8)|(int)(30+t*10)); } }
+    private void drawAurora() { GlStateManager.enableBlend(); GlStateManager.blendFunc(770,771); wave(0xFF1A3A8A,0.6f,0f,0.7f); wave(0xFF0A4A6A,0.4f,1.2f,0.5f); wave(0xFF2A1A5A,0.35f,2.5f,0.45f); GlStateManager.disableBlend(); }
+    private void wave(int col, float amp, float phase, float alpha) { int r=(col>>16)&0xFF,g=(col>>8)&0xFF,b=col&0xFF,a=(int)(alpha*80); int seg=width/2,maxH=(int)(height*0.35f*amp); for(int i=0;i<seg;i++){float xn=(float)i/seg;float w=(float)(Math.sin(xn*4+tick+phase)*0.4+Math.sin(xn*2.3+tick*0.7+phase*1.3)*0.35+Math.sin(xn*7.1+tick*1.3+phase*0.7)*0.15+Math.sin(xn*1.5+tick*0.4+phase*2.1)*0.1);int h=Math.max(4,(int)(maxH*(0.5f+w*0.5f)));for(int y=0;y<h;y++){float f=1f-(float)y/h;f*=f;drawRect(i*2,y,i*2+2,y+1,((int)(a*f)<<24)|(r<<16)|(g<<8)|b);}}}
+    private void drawStars() { for(int i=0;i<SC;i++){int x=sx[i]*width/1000,y=sy[i]*height/700,z=(ss[i]==2)?2:1;float blink=(float)(Math.sin(tick*sp[i]*8+i)*0.3+0.7);drawRect(x,y,x+z,y+z,((int)(sa[i]*blink*200)<<24)|0x7BA7D4);} }
+    private void drawParticles() { for(int i=0;i<PC;i++){px[i]+=pvx[i];py[i]+=pvy[i];if(py[i]<-4)py[i]=height+4;if(px[i]<-4)px[i]=width+4;if(px[i]>width+4)px[i]=-4;float pulse=(float)(Math.sin(tick*2+i*1.3)*0.3+0.7);int z=(int)ps[i];drawRect((int)px[i],(int)py[i],(int)px[i]+z,(int)py[i]+z,((int)(pa[i]*pulse*180)<<24)|0x85B7EB);} }
+    private void drawHeader(String title) { drawRect(0,0,width,26,0xCC0A111E); drawRect(0,26,width,27,0x44378ADD); int tw=mc.fontRendererObj.getStringWidth(title); mc.fontRendererObj.drawString(title,width/2-tw/2+1,9,0x22378ADD); mc.fontRendererObj.drawString(title,width/2-tw/2,8,0xCC85B7EB); }
+    private void drawBorder(int x1,int y1,int x2,int y2,int color) { drawRect(x1,y1,x2,y1+1,color);drawRect(x1,y2-1,x2,y2,color);drawRect(x1,y1,x1+1,y2,color);drawRect(x2-1,y1,x2,y2,color); }
+    @Override public boolean doesGuiPauseGame() { return false; }
+}
