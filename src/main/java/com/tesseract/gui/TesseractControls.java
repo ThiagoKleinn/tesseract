@@ -27,12 +27,19 @@ public class TesseractControls extends GuiScreen {
 
     private KeyBinding waitingForKey = null;
     private int scrollOffset = 0;
-    private final float[] bindHover;
+
+    // CORRIGIDO: tamanho separado para nomes, binds e botões
+    // [0..keys.length-1] = hover dos nomes
+    // [keys.length..keys.length*2-1] = hover dos binds
+    // [keys.length*2] = Reset All
+    // [keys.length*2+1] = Done
+    private float[] bindHover;
 
     public TesseractControls(GuiScreen parent, GameSettings settings) {
         this.parent = parent;
         this.settings = settings;
-        bindHover = new float[settings.keyBindings.length + 4];
+        // CORRIGIDO: tamanho = keys*2 + 2 botões
+        bindHover = new float[settings.keyBindings.length * 2 + 2];
         initParticles();
     }
 
@@ -70,25 +77,29 @@ public class TesseractControls extends GuiScreen {
             KeyBinding kb = keys[idx];
             int ry = ly + i * (BTN_H + GAP);
 
+            // categoria
             String catLabel = kb.getKeyCategory();
             mc.fontRendererObj.drawString(catLabel, lx, ry + BTN_H / 2 - 3, 0x88C8D8F0);
 
+            // nome da ação
             String keyName = kb.getKeyDescription();
             int lw = mc.fontRendererObj.getStringWidth(keyName);
             int nameBx = lx + 110;
-            // CORRIGIDO: removidos parâmetros desnecessários
             drawSmallRect(nameBx, ry, nameBx + 95, ry + BTN_H);
             mc.fontRendererObj.drawString(keyName, nameBx + 48 - lw / 2, ry + BTN_H / 2 - 3, 0xCCC8D8F0);
 
+            // botão de bind — CORRIGIDO: idx para nome, idx + keys.length para bind
             int keyCode = kb.getKeyCode();
             String bindLabel = waitingForKey == kb ? "> Press Key <"
                     : (keyCode <= 0 ? "NONE" : Keyboard.getKeyName(keyCode));
             boolean conflict = isConflict(kb);
             int bindBx = lx + 210;
             int bindColor = waitingForKey == kb ? 0xFF4A8AFF : (conflict ? 0xFF8A2222 : 0xFF1A4A8A);
+            // CORRIGIDO: idx + keys.length garante índice separado do nome
             drawBindBtn(bindBx, ry, bindLabel, bindColor, idx + keys.length, mouseX, mouseY);
         }
 
+        // scrollbar
         if (keys.length > VISIBLE_ROWS) {
             int sbH = listH();
             int thumbH = Math.max(20, sbH * VISIBLE_ROWS / keys.length);
@@ -97,20 +108,24 @@ public class TesseractControls extends GuiScreen {
             drawRect(lx + SCROLL_W + 4, thumbY, lx + SCROLL_W + 8, thumbY + thumbH, 0xAA85B7EB);
         }
 
+        // botões Reset All e Done usam os últimos 2 slots
         int btnY = listY() + listH() + GAP * 2;
-        drawStyledBtn(lx, btnY, "Reset All", bindHover.length - 2, mouseX, mouseY);
-        drawStyledBtn(lx + SCROLL_W - BTN_W, btnY, "Done", bindHover.length - 1, mouseX, mouseY);
+        int resetIdx = bindHover.length - 2;
+        int doneIdx  = bindHover.length - 1;
+        drawStyledBtn(lx, btnY, "Reset All", resetIdx, mouseX, mouseY);
+        drawStyledBtn(lx + SCROLL_W - BTN_W, btnY, "Done", doneIdx, mouseX, mouseY);
 
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
-    // CORRIGIDO: removidos parâmetros não utilizados
     private void drawSmallRect(int bx, int by, int ex, int ey) {
         drawRect(bx, by, ex, ey, 0x33378ADD);
         drawBorder(bx, by, ex, ey, 0x4485B7EB);
     }
 
     private void drawBindBtn(int bx, int by, String label, int bgColor, int idx, int mouseX, int mouseY) {
+        // CORRIGIDO: garante que idx nunca estoura o array
+        if (idx < 0 || idx >= bindHover.length) return;
         boolean hov = mouseX >= bx && mouseX <= bx + 95 && mouseY >= by && mouseY <= by + BTN_H;
         bindHover[idx] = hov ? Math.min(1f, bindHover[idx] + 0.1f) : Math.max(0f, bindHover[idx] - 0.07f);
         float ha = bindHover[idx];
@@ -121,6 +136,7 @@ public class TesseractControls extends GuiScreen {
     }
 
     private void drawStyledBtn(int bx, int by, String label, int idx, int mouseX, int mouseY) {
+        if (idx < 0 || idx >= bindHover.length) return;
         boolean hov = mouseX >= bx && mouseX <= bx + BTN_W && mouseY >= by && mouseY <= by + BTN_H;
         bindHover[idx] = hov ? Math.min(1f, bindHover[idx] + 0.1f) : Math.max(0f, bindHover[idx] - 0.07f);
         float ha = bindHover[idx];
@@ -147,13 +163,14 @@ public class TesseractControls extends GuiScreen {
         }
 
         int btnY = listY() + listH() + GAP * 2;
+        // Reset All
         if (hit(mouseX, mouseY, lx, btnY)) {
-            // CORRIGIDO: usa getKeyCode() como fallback — troque pelo campo correto do seu mappings
-            for (KeyBinding kb : keys) kb.setKeyCode(kb.getKeyCode());
+            for (KeyBinding kb : keys) kb.setKeyCode(kb.getKeyCodeDefault());
             KeyBinding.resetKeyBindingArrayAndHash();
             settings.saveOptions();
             return;
         }
+        // Done
         if (hit(mouseX, mouseY, lx + SCROLL_W - BTN_W, btnY)) {
             settings.saveOptions();
             mc.displayGuiScreen(parent);
@@ -182,7 +199,6 @@ public class TesseractControls extends GuiScreen {
         }
     }
 
-    // CORRIGIDO: removido parâmetro 'w' que era sempre BTN_W
     private boolean hit(int mx, int my, int bx, int by) {
         return mx >= bx && mx <= bx + BTN_W && my >= by && my <= by + BTN_H;
     }
