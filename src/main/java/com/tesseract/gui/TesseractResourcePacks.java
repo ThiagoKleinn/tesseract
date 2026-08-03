@@ -121,8 +121,8 @@ public class TesseractResourcePacks extends GuiScreen {
         }
 
         int doneY = listY() + VISIBLE * (ROW_H + GAP) + GAP * 2;
-        drawStyledBtn(width / 2 - 75, doneY, "Done", 0, mouseX, mouseY);
-        drawStyledBtn(width / 2 - 75 - 80, doneY, "Open Folder", 1, mouseX, mouseY);
+        drawStyledBtn(width / 2 - 155, doneY, "Open Folder", 1, mouseX, mouseY);
+        drawStyledBtn(width / 2 + 5,   doneY, "Done",        0, mouseX, mouseY);
 
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
@@ -171,8 +171,9 @@ public class TesseractResourcePacks extends GuiScreen {
         }
 
         int doneY = listY() + VISIBLE * (ROW_H + GAP) + GAP * 2;
-        if (mouseX >= width/2-75 && mouseX <= width/2+75 && mouseY >= doneY && mouseY <= doneY + 20) mc.displayGuiScreen(parent);
-        if (mouseX >= width/2-155 && mouseX <= width/2-5 && mouseY >= doneY && mouseY <= doneY + 20) {
+        if (mouseX >= width/2+5 && mouseX <= width/2+155 && mouseY >= doneY && mouseY <= doneY+20)
+            mc.displayGuiScreen(parent);
+        if (mouseX >= width/2-155 && mouseX <= width/2-5 && mouseY >= doneY && mouseY <= doneY+20) {
             try { java.awt.Desktop.getDesktop().open(mc.getResourcePackRepository().getDirResourcepacks()); } catch (Exception ignored) {}
         }
     }
