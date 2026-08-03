@@ -3,7 +3,6 @@ package com.tesseract.gui;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiSelectWorld;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.util.ResourceLocation;
 
 import java.util.Random;
 
@@ -18,9 +17,6 @@ public class TesseractWorldSelect extends GuiSelectWorld {
     private final float[] pvx = new float[PC], pvy = new float[PC];
     private final float[] pa = new float[PC], ps = new float[PC];
 
-    // Textura preta 1x1 para substituir a terra
-    private static final ResourceLocation BLACK_TEX = new ResourceLocation("tesseract", "textures/black.png");
-
     public TesseractWorldSelect(GuiScreen parent) {
         super(parent);
         this.parentScreen = parent;
@@ -30,14 +26,13 @@ public class TesseractWorldSelect extends GuiSelectWorld {
         for (int i = 0; i < PC; i++) { px[i]=p.nextFloat()*1000; py[i]=p.nextFloat()*700; pvx[i]=(p.nextFloat()-0.5f)*0.4f; pvy[i]=-0.1f-p.nextFloat()*0.2f; pa[i]=0.2f+p.nextFloat()*0.4f; ps[i]=1f+p.nextFloat()*2f; }
     }
 
-    // Substitui a textura de fundo do GuiSlot por cor sólida escura
     @Override
-    public void drawDefaultBackground() {
+    public void drawWorldBackground(int tint) {
         drawRect(0, 0, width, height, 0xFF0A111E);
     }
 
     @Override
-    public void drawWorldBackground(int tint) {
+    public void drawDefaultBackground() {
         drawRect(0, 0, width, height, 0xFF0A111E);
     }
 
@@ -45,13 +40,14 @@ public class TesseractWorldSelect extends GuiSelectWorld {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         tick += 0.012f;
 
-        // Fundo cósmico
-        drawBg(); drawAurora(); drawStars(); drawParticles();
+        drawBg();
+        drawAurora();
+        drawStars();
+        drawParticles();
 
-        // super renderiza a lista e botões sobre o fundo já desenhado
         super.drawScreen(mouseX, mouseY, partialTicks);
 
-        // Header por cima de tudo
+        // Header por cima — cobre o "Select World" vanilla
         drawHeader("SINGLEPLAYER");
     }
 
@@ -93,10 +89,10 @@ public class TesseractWorldSelect extends GuiSelectWorld {
         }
     }
     private void drawHeader(String title) {
-        drawRect(0, 0, width, 26, 0xCC0A111E);
-        drawRect(0, 26, width, 27, 0x44378ADD);
+        drawRect(0, 0, width, 32, 0xEE0A111E);
+        drawRect(0, 32, width, 33, 0x66378ADD);
         int tw = mc.fontRendererObj.getStringWidth(title);
-        mc.fontRendererObj.drawString(title, width/2-tw/2+1, 9, 0x22378ADD);
-        mc.fontRendererObj.drawString(title, width/2-tw/2,   8, 0xCC85B7EB);
+        mc.fontRendererObj.drawString(title, width/2-tw/2+1, 10, 0x22378ADD);
+        mc.fontRendererObj.drawString(title, width/2-tw/2,    9, 0xCC85B7EB);
     }
 }

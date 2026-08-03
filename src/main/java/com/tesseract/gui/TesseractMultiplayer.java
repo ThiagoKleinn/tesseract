@@ -3,6 +3,9 @@ package com.tesseract.gui;
 import net.minecraft.client.gui.GuiMultiplayer;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.WorldRenderer;
+import net.minecraft.util.ResourceLocation;
 
 import java.util.Random;
 
@@ -26,21 +29,34 @@ public class TesseractMultiplayer extends GuiMultiplayer {
         for (int i = 0; i < PC; i++) { px[i]=p.nextFloat()*1000; py[i]=p.nextFloat()*700; pvx[i]=(p.nextFloat()-0.5f)*0.4f; pvy[i]=-0.1f-p.nextFloat()*0.2f; pa[i]=0.2f+p.nextFloat()*0.4f; ps[i]=1f+p.nextFloat()*2f; }
     }
 
+    // Intercepta o drawBackground do GuiSlot — chamado com tint como argumento
+    // No 1.8.9 o GuiSlot chama this.parent.drawWorldBackground(0)
+    @Override
+    public void drawWorldBackground(int tint) {
+        // Em vez da textura de terra, pinta o fundo cósmico sólido
+        drawRect(0, 0, width, height, 0xFF0A111E);
+    }
+
     @Override
     public void drawDefaultBackground() {
         drawRect(0, 0, width, height, 0xFF0A111E);
     }
 
     @Override
-    public void drawWorldBackground(int tint) {
-        drawRect(0, 0, width, height, 0xFF0A111E);
-    }
-
-    @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         tick += 0.012f;
-        drawBg(); drawAurora(); drawStars(); drawParticles();
+
+        // Fundo cósmico antes de tudo
+        drawBg();
+        drawAurora();
+        drawStars();
+        drawParticles();
+
+        // super desenha a lista e botões
+        // o GuiSlot vai chamar drawWorldBackground que agora retorna sólido
         super.drawScreen(mouseX, mouseY, partialTicks);
+
+        // Header por cima — cobre o "Play Multiplayer" vanilla
         drawHeader("MULTIPLAYER");
     }
 
@@ -82,10 +98,11 @@ public class TesseractMultiplayer extends GuiMultiplayer {
         }
     }
     private void drawHeader(String title) {
-        drawRect(0, 0, width, 26, 0xCC0A111E);
-        drawRect(0, 26, width, 27, 0x44378ADD);
+        // Cobre o header vanilla completamente
+        drawRect(0, 0, width, 32, 0xEE0A111E);
+        drawRect(0, 32, width, 33, 0x66378ADD);
         int tw = mc.fontRendererObj.getStringWidth(title);
-        mc.fontRendererObj.drawString(title, width/2-tw/2+1, 9, 0x22378ADD);
-        mc.fontRendererObj.drawString(title, width/2-tw/2,   8, 0xCC85B7EB);
+        mc.fontRendererObj.drawString(title, width/2-tw/2+1, 10, 0x22378ADD);
+        mc.fontRendererObj.drawString(title, width/2-tw/2,    9, 0xCC85B7EB);
     }
 }
