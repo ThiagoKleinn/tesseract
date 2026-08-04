@@ -1,12 +1,19 @@
 # 🔷 Tesseract Client
 
-> **Client de Minecraft 1.8.9** — desenvolvido do zero por [ThiagoKleinn](https://github.com/ThiagoKleinn).
+![Minecraft](https://img.shields.io/badge/Minecraft-1.8.9-62b47a?style=for-the-badge&logo=creeper&logoColor=white)
+![Forge](https://img.shields.io/badge/Forge-11.15.1.2318-e07021?style=for-the-badge)
+![Java](https://img.shields.io/badge/Java-8-f89820?style=for-the-badge&logo=openjdk&logoColor=white)
+![Gradle](https://img.shields.io/badge/Gradle-Build-02303a?style=for-the-badge&logo=gradle&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+![Stars](https://img.shields.io/github/stars/ThiagoKleinn/tesseract?style=for-the-badge&color=yellow)
+
+> **Cliente Minecraft 1.8.9 legítimo** — desenvolvido do zero por [ThiagoKleinn](https://github.com/ThiagoKleinn).
 
 ---
 
 ## 📖 Sobre
 
-O **Tesseract** é um client de Minecraft para a versão **1.8.9** construído sobre o **Minecraft Forge**, focado em melhorar a experiência de jogo legit. O projeto é desenvolvido em Java com Gradle como sistema de build.
+O **Tesseract** é um cliente Minecraft para a versão **1.8.9** construído sobre o **Minecraft Forge**, focado em melhorar a experiência de jogo legítimo. O projeto é desenvolvido em Java com Gradle como sistema de build.
 
 ---
 
