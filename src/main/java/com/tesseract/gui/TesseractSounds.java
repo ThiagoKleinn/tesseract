@@ -24,7 +24,7 @@ public class TesseractSounds extends GuiScreen {
 
     private static final int BTN_W = 310, BTN_H = 20, GAP = 4;
 
-    private final float[] btnHover = new float[11];
+    private final float[] btnHover = new float[12];
     private int dragging = -1;
 
     private static final SoundCategory[] CATEGORIES = {
@@ -70,7 +70,7 @@ public class TesseractSounds extends GuiScreen {
             drawSlider(lx, rowY(i + 1), CAT_NAMES[i], vol, i + 1, mouseX, mouseY);
         }
 
-        drawStyledButton(lx, rowY(CATEGORIES.length + 2), "Done", 11, mouseX, mouseY);
+        drawStyledButton(lx, rowY(CATEGORIES.length + 2), "Done", 10, mouseX, mouseY);
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 

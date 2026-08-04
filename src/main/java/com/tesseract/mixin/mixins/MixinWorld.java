@@ -1,34 +1,29 @@
 package com.tesseract.mixin.mixins;
 
-import com.tesseract.module.modules.AmbienceModule;
 import com.tesseract.Tesseract;
+import com.tesseract.module.modules.AmbienceModule;
+import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import net.minecraft.world.World; // era WorldClient
-
-@Mixin(World.class) // era WorldClient.class
+@Mixin(World.class)
 public class MixinWorld {
 
-    @Inject(method = "getWorldTime", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getWorldTime", at = @At("HEAD"), cancellable = true)
     private void interceptWorldTime(CallbackInfoReturnable<Long> cir) {
         AmbienceModule mod = getAmbienceModule();
         if (mod == null || !mod.isEnabled()) return;
 
         AmbienceModule.SkyMode mode = mod.getSkyMode();
-        Long fakeTime = null;
-
         switch (mode) {
-            case DAY:     fakeTime = 6000L;  break;
-            case SUNSET:  fakeTime = 12000L; break;
-            case NIGHT:   fakeTime = 18000L; break;
-            case SUNRISE: fakeTime = 23000L; break;
+            case DAY:     cir.setReturnValue(6000L);  return;
+            case SUNSET:  cir.setReturnValue(12000L); return;
+            case NIGHT:   cir.setReturnValue(18000L); return;
+            case SUNRISE: cir.setReturnValue(23000L); return;
             default: break;
         }
-
-        if (fakeTime != null) cir.setReturnValue(fakeTime);
     }
 
     private AmbienceModule getAmbienceModule() {

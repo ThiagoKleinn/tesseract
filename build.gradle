@@ -63,7 +63,6 @@ jar {
         attributes(
                 'FMLCorePluginContainsFMLMod': 'true',
                 'FMLCorePlugin': 'com.tesseract.mixin.MixinLoader',
-                'TweakClass': 'org.spongepowered.asm.launch.MixinTweaker',
                 'MixinConfigs': 'mixins.tesseract.json'
         )
     }
