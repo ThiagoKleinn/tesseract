@@ -6,10 +6,12 @@ buildscript {
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
+        classpath 'org.spongepowered:mixingradle:0.6-SNAPSHOT'
     }
 }
 
 apply plugin: 'net.minecraftforge.gradle.forge'
+apply plugin: 'org.spongepowered.mixin'
 
 version = '1.0.0'
 group = "com.tesseract"
@@ -24,8 +26,22 @@ minecraft {
     mappings = 'stable_22'
 }
 
+repositories {
+    maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+    mavenCentral()
+}
+
 dependencies {
-    // dependências extras aqui futuramente
+    compile('org.spongepowered:mixin:0.7.11-SNAPSHOT') {
+        exclude module: 'launchwrapper'
+        exclude module: 'guava'
+        exclude module: 'gson'
+        exclude module: 'commons-io'
+    }
+}
+
+mixin {
+    add sourceSets.main, 'mixins.tesseract.refmap.json'
 }
 
 processResources {
@@ -45,7 +61,10 @@ processResources {
 jar {
     manifest {
         attributes(
-                'FMLCorePluginContainsFMLMod': 'true'
+                'FMLCorePluginContainsFMLMod': 'true',
+                'FMLCorePlugin': 'com.tesseract.mixin.MixinLoader',
+                'TweakClass': 'org.spongepowered.asm.launch.MixinTweaker',
+                'MixinConfigs': 'mixins.tesseract.json'
         )
     }
 }
