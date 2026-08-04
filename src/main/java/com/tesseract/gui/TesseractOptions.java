@@ -126,7 +126,13 @@ public class TesseractOptions extends GuiScreen {
         int doneY = firstY + (BUTTONS.length + 1) * (BTN_H + BTN_GAP);
         int doneX = width / 2 - BTN_W / 2;
         if (mouseX >= doneX && mouseX <= doneX + BTN_W && mouseY >= doneY && mouseY <= doneY + BTN_H) {
-            mc.displayGuiScreen(parent);
+            if (mc.theWorld != null) {
+                // Estava no jogo — volta para a tela de pause
+                mc.displayGuiScreen(new net.minecraft.client.gui.GuiIngameMenu());
+            } else {
+                // Estava no main menu — volta para ele
+                mc.displayGuiScreen(parent);
+            }
         }
     }
 
@@ -148,7 +154,13 @@ public class TesseractOptions extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
-        if (keyCode == org.lwjgl.input.Keyboard.KEY_ESCAPE) mc.displayGuiScreen(parent);
+        if (keyCode == org.lwjgl.input.Keyboard.KEY_ESCAPE) {
+            if (mc.theWorld != null) {
+                mc.displayGuiScreen(new net.minecraft.client.gui.GuiIngameMenu());
+            } else {
+                mc.displayGuiScreen(parent);
+            }
+        }
     }
 
     private void drawBg() {
