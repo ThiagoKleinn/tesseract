@@ -15,7 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GuiSlot.class)
 public class MixinGuiSlot {
 
-    @Inject(method = "drawContainerBackground", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "drawContainerBackground(Lnet/minecraft/client/renderer/Tessellator;)V",
+            at = @At("HEAD"), cancellable = true, remap = false)
     private void cancelDirtBg(Tessellator tessellator, CallbackInfo ci) {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.currentScreen instanceof TesseractWorldSelect ||
@@ -23,5 +24,4 @@ public class MixinGuiSlot {
             ci.cancel();
         }
     }
-
 }
