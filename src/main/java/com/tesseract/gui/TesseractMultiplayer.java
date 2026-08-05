@@ -129,19 +129,8 @@ public class TesseractMultiplayer extends GuiMultiplayer {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
-        GuiSlot list = getRealServerList();
-        if (list != null) {
-            try {
-                Method m = null;
-                for (String name : new String[]{"mouseClicked", "func_148179_a"}) {
-                    try {
-                        m = GuiSlot.class.getDeclaredMethod(name, int.class, int.class, int.class);
-                        break;
-                    } catch (NoSuchMethodException ignored) {}
-                }
-                if (m != null) { m.setAccessible(true); m.invoke(list, mouseX, mouseY, mouseButton); }
-            } catch (Exception ignored) {}
-        }
+        // deixa o GuiMultiplayer vanilla processar tudo (seleção de servidor, etc)
+        super.mouseClicked(mouseX, mouseY, mouseButton);
 
         if (mouseButton != 0) return;
 
