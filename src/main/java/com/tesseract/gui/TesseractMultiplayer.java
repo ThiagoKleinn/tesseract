@@ -122,6 +122,8 @@ public class TesseractMultiplayer extends GuiMultiplayer {
 
         drawCustomButtons(mouseX, mouseY);
         drawHeader("MULTIPLAYER");
+        drawRect(0, height - 68, width, height - 67, 0x66378ADD);
+
     }
 
 

@@ -126,6 +126,8 @@ public class TesseractWorldSelect extends GuiSelectWorld {
 
         drawCustomButtons(mouseX, mouseY);
         drawHeader("SINGLEPLAYER");
+        drawRect(0, height - 68, width, height - 67, 0x66378ADD);
+
     }
 
     @Override
