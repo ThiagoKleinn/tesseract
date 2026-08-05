@@ -112,10 +112,7 @@ public class TesseractMultiplayer extends GuiMultiplayer {
         drawParticles();
 
         GuiSlot real = getRealServerList();
-        if (real != null) {
-            GuiSlot wrapped = wrapSlotNoBg(real);
-            wrapped.drawScreen(mouseX, mouseY, partialTicks);
-        }
+        if (real != null) real.drawScreen(mouseX, mouseY, partialTicks);
 
         drawSpaceBg(0, 36);
         drawSpaceBg(height - 68, height);
@@ -126,6 +123,7 @@ public class TesseractMultiplayer extends GuiMultiplayer {
         drawCustomButtons(mouseX, mouseY);
         drawHeader("MULTIPLAYER");
     }
+
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {

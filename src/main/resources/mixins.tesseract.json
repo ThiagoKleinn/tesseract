@@ -8,7 +8,8 @@
   "client": [
     "MixinWorld",
     "MixinRenderGlobal",
-    "MixinGuiIngameMenu"
+    "MixinGuiIngameMenu",
+    "MixinGuiSlot"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -116,10 +116,7 @@ public class TesseractWorldSelect extends GuiSelectWorld {
         drawParticles();
 
         GuiSlot real = getWorldList();
-        if (real != null) {
-            GuiSlot wrapped = wrapSlotNoBg(real);
-            wrapped.drawScreen(mouseX, mouseY, partialTicks);
-        }
+        if (real != null) real.drawScreen(mouseX, mouseY, partialTicks);
 
         drawSpaceBg(0, 36);
         drawSpaceBg(height - 68, height);
