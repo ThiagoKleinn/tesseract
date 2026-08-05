@@ -1,11 +1,9 @@
 package com.tesseract.gui;
 
+import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiMultiplayer;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.WorldRenderer;
-import net.minecraft.util.ResourceLocation;
 
 import java.util.Random;
 
@@ -29,48 +27,72 @@ public class TesseractMultiplayer extends GuiMultiplayer {
         for (int i = 0; i < PC; i++) { px[i]=p.nextFloat()*1000; py[i]=p.nextFloat()*700; pvx[i]=(p.nextFloat()-0.5f)*0.4f; pvy[i]=-0.1f-p.nextFloat()*0.2f; pa[i]=0.2f+p.nextFloat()*0.4f; ps[i]=1f+p.nextFloat()*2f; }
     }
 
-    // Intercepta o drawBackground do GuiSlot — chamado com tint como argumento
-    // No 1.8.9 o GuiSlot chama this.parent.drawWorldBackground(0)
     @Override
-    public void drawWorldBackground(int tint) {
-        // Em vez da textura de terra, pinta o fundo cósmico sólido
-        drawRect(0, 0, width, height, 0xFF0A111E);
-    }
+    public void drawWorldBackground(int tint) { /* bloqueia o fundo de terra */ }
 
     @Override
-    public void drawDefaultBackground() {
-        drawRect(0, 0, width, height, 0xFF0A111E);
+    public void drawDefaultBackground() { /* bloqueia o fundo de terra */ }
+
+    // thiago bloco de terra
+    private net.minecraft.client.gui.ServerSelectionList getServerList2() {
+        try {
+            for (java.lang.reflect.Field f : GuiMultiplayer.class.getDeclaredFields()) {
+                f.setAccessible(true);
+                Object val = f.get(this);
+                if (val instanceof net.minecraft.client.gui.ServerSelectionList) {
+                    return (net.minecraft.client.gui.ServerSelectionList) val;
+                }
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return null;
     }
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         tick += 0.012f;
+        updateParticles();
 
-        // Fundo cósmico antes de tudo
-        drawBg();
+        paintSpaceBackground();
+
+        getServerList2().drawScreen(mouseX, mouseY, partialTicks);
+        paintSpaceBackground();
+        drawListOverlay();
+
+        for (GuiButton b : this.buttonList) {
+            b.drawButton(mc, mouseX, mouseY);
+        }
+
+        drawHeader("MULTIPLAYER");
+
+    }
+
+    private void drawListOverlay() {
+        int listTop = 32;
+        int listBottom = height - 64;
+        drawRect(0, listTop, width, listTop + 1, 0x44378ADD);
+        drawRect(0, listBottom, width, listBottom + 1, 0x44378ADD);
+    }
+
+    private void paintSpaceBackground() {
+        drawBg(0, height);
         drawAurora();
         drawStars();
         drawParticles();
-
-        // super desenha a lista e botões
-        // o GuiSlot vai chamar drawWorldBackground que agora retorna sólido
-        super.drawScreen(mouseX, mouseY, partialTicks);
-
-        // Header por cima — cobre o "Play Multiplayer" vanilla
-        drawHeader("MULTIPLAYER");
     }
 
-    private void drawBg() {
-        for (int i = 0; i < height; i++) {
+    private void drawBg(int yStart, int yEnd) {
+        for (int i = Math.max(0, yStart); i < Math.min(height, yEnd); i++) {
             float t = (float) i / height;
             drawRect(0, i, width, i + 1, 0xFF000000 | ((int)(10+t*4) << 16) | ((int)(17+t*6) << 8) | (int)(30+t*10));
         }
     }
+
     private void drawAurora() {
         GlStateManager.enableBlend(); GlStateManager.blendFunc(770, 771);
         wave(0xFF1A3A8A,0.6f,0f,0.7f); wave(0xFF0A4A6A,0.4f,1.2f,0.5f); wave(0xFF2A1A5A,0.35f,2.5f,0.45f);
         GlStateManager.disableBlend();
     }
+
     private void wave(int col, float amp, float phase, float alpha) {
         int r=(col>>16)&0xFF,g=(col>>8)&0xFF,b=col&0xFF,a=(int)(alpha*80);
         int seg=width/2, maxH=(int)(height*0.35f*amp);
@@ -81,6 +103,7 @@ public class TesseractMultiplayer extends GuiMultiplayer {
             for (int y=0;y<h;y++) { float f=1f-(float)y/h; f*=f; drawRect(i*2,y,i*2+2,y+1,((int)(a*f)<<24)|(r<<16)|(g<<8)|b); }
         }
     }
+
     private void drawStars() {
         for (int i=0;i<SC;i++) {
             int x=sx[i]*width/1000, y=sy[i]*height/700, z=(ss[i]==2)?2:1;
@@ -88,17 +111,25 @@ public class TesseractMultiplayer extends GuiMultiplayer {
             drawRect(x,y,x+z,y+z,((int)(sa[i]*blink*200)<<24)|0x7BA7D4);
         }
     }
+
+    private void updateParticles() {
+        for (int i = 0; i < PC; i++) {
+            px[i]+=pvx[i]; py[i]+=pvy[i];
+            if(py[i]<-4) py[i]=height+4;
+            if(px[i]<-4) px[i]=width+4;
+            if(px[i]>width+4) px[i]=-4;
+        }
+    }
+
     private void drawParticles() {
         for (int i=0;i<PC;i++) {
-            px[i]+=pvx[i]; py[i]+=pvy[i];
-            if(py[i]<-4) py[i]=height+4; if(px[i]<-4) px[i]=width+4; if(px[i]>width+4) px[i]=-4;
             float pulse=(float)(Math.sin(tick*2+i*1.3)*0.3+0.7);
             int z=(int)ps[i];
             drawRect((int)px[i],(int)py[i],(int)px[i]+z,(int)py[i]+z,((int)(pa[i]*pulse*180)<<24)|0x85B7EB);
         }
     }
+
     private void drawHeader(String title) {
-        // Cobre o header vanilla completamente
         drawRect(0, 0, width, 32, 0xEE0A111E);
         drawRect(0, 32, width, 33, 0x66378ADD);
         int tw = mc.fontRendererObj.getStringWidth(title);
