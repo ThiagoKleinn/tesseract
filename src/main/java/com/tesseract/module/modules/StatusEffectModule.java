@@ -5,8 +5,10 @@ import com.tesseract.Tesseract;
 import com.tesseract.event.EventHandler;
 import com.tesseract.event.events.EventRender2D;
 import com.tesseract.module.BaseModule;
+import com.tesseract.module.HudComponent;
 import com.tesseract.module.config.Configurable;
 import com.tesseract.module.config.ModuleOption;
+import com.tesseract.util.RenderUtil;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.potion.Potion;
@@ -15,33 +17,29 @@ import net.minecraft.util.ResourceLocation;
 
 import java.util.*;
 
-public class StatusEffectModule extends BaseModule implements Configurable {
+public class StatusEffectModule extends BaseModule implements Configurable, HudComponent {
 
-    // -------------------------------------------------------------------------
-    // Layout
 
     private static final int ICON_SIZE = 18;
     private static final int GAP       = 3;
     private static final int TEXT_PAD  = 3;
+    private static final int MIN_W     = 60;
+    private static final int MIN_H     = ICON_SIZE;
 
     private static final ResourceLocation INVENTORY_TEXTURE =
             new ResourceLocation("textures/gui/container/inventory.png");
 
     private static final int COLOR_TIME = 0xFFAAAAAA;
 
-    // Posição HUD
     private int hudX = 10;
     private int hudY = 60;
 
-    // -------------------------------------------------------------------------
-    // Opção de alinhamento: false = ícone esquerda (padrão), true = ícone direita
+    private int hudW = MIN_W;
+    private int hudH = MIN_H;
 
     private boolean iconRight = false;
 
     private final AlignmentOption alignOption = new AlignmentOption();
-
-    // -------------------------------------------------------------------------
-    // Nomes hardcoded
 
     private static final Map<Integer, String> POTION_NAMES = new HashMap<>();
     static {
@@ -70,13 +68,8 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         POTION_NAMES.put(23, "Saturation");
     }
 
-    // -------------------------------------------------------------------------
-    // Filtro de efeitos
-
     private final Map<Integer, Boolean> effectFilter = new LinkedHashMap<>();
     private final List<ModuleOption<?>> options      = new ArrayList<>();
-
-    // -------------------------------------------------------------------------
 
     public StatusEffectModule() {
         super("StatusEffect", "Exibe efeitos de poções ativos.", Category.MODS);
@@ -87,12 +80,23 @@ public class StatusEffectModule extends BaseModule implements Configurable {
     @Override public List<ModuleOption<?>> getOptions() { return options; }
     @Override public void onOptionChanged() { saveConfig(); }
 
-    // -------------------------------------------------------------------------
-    // Render
+    @Override public int    getHudX()      { return hudX; }
+    @Override public int    getHudY()      { return hudY; }
+    @Override public int    getHudWidth()  { return hudW; }
+    @Override public int    getHudHeight() { return hudH; }
+    @Override public String getHudLabel()  { return "Status Effects"; }
+
+    @Override
+    public void setHudPos(int x, int y) {
+        this.hudX = x;
+        this.hudY = y;
+    }
 
     @EventHandler
     public void onRender(EventRender2D event) {
         if (mc.thePlayer == null) return;
+
+        handleHudDrag(this, event.getResolution());
 
         Collection<PotionEffect> effects = mc.thePlayer.getActivePotionEffects();
         if (effects == null || effects.isEmpty()) return;
@@ -100,26 +104,33 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         syncFilterMap(effects);
         rebuildDynamicOptions(effects);
 
-        int curY = hudY;
-
-        // Pré-calcula largura máxima dos textos para fixar coluna do ícone no modo RIGHT
+        // Filtra efeitos visíveis e calcula dimensões do HUD (usadas também pelo HudLayoutScreen)
+        List<PotionEffect> visible = new ArrayList<>();
         int maxTextW = 0;
-        if (iconRight) {
-            for (PotionEffect e2 : effects) {
-                int id2 = e2.getPotionID();
-                if (!effectFilter.getOrDefault(id2, true)) continue;
-                int w = Math.max(mc.fontRendererObj.getStringWidth(getPotionName(e2, id2)),
-                        mc.fontRendererObj.getStringWidth(formatDuration(e2.getDuration())));
-                if (w > maxTextW) maxTextW = w;
-            }
+        for (PotionEffect e : effects) {
+            int id = e.getPotionID();
+            if (!effectFilter.getOrDefault(id, true)) continue;
+            if (Potion.potionTypes[id] == null) continue;
+            visible.add(e);
+            int w = Math.max(mc.fontRendererObj.getStringWidth(getPotionName(e, id)),
+                    mc.fontRendererObj.getStringWidth(formatDuration(e.getDuration())));
+            if (w > maxTextW) maxTextW = w;
         }
 
-        for (PotionEffect effect : effects) {
-            int id = effect.getPotionID();
-            if (!effectFilter.getOrDefault(id, true)) continue;
+        if (visible.isEmpty()) {
+            hudW = MIN_W;
+            hudH = MIN_H;
+            return;
+        }
 
+        hudW = ICON_SIZE + TEXT_PAD + maxTextW;
+        hudH = visible.size() * ICON_SIZE + (visible.size() - 1) * GAP;
+
+        int curY = hudY;
+
+        for (PotionEffect effect : visible) {
+            int id = effect.getPotionID();
             Potion potion = Potion.potionTypes[id];
-            if (potion == null) continue;
 
             String name    = getPotionName(effect, id);
             String timeStr = formatDuration(effect.getDuration());
@@ -137,8 +148,8 @@ public class StatusEffectModule extends BaseModule implements Configurable {
             int nameY = curY + (ICON_SIZE / 2) - mc.fontRendererObj.FONT_HEIGHT;
             int timeY = nameY + mc.fontRendererObj.FONT_HEIGHT + 1;
 
-            mc.fontRendererObj.drawStringWithShadow(name,    textX, nameY, color);
-            mc.fontRendererObj.drawStringWithShadow(timeStr, textX, timeY, COLOR_TIME);
+            RenderUtil.drawStringWithShadow(name,    textX, nameY, color);
+            RenderUtil.drawStringWithShadow(timeStr, textX, timeY, COLOR_TIME);
 
             if (potion.hasStatusIcon()) {
                 drawPotionIcon(potion, iconX, curY);
@@ -147,9 +158,6 @@ public class StatusEffectModule extends BaseModule implements Configurable {
             curY += ICON_SIZE + GAP;
         }
     }
-
-    // -------------------------------------------------------------------------
-    // Ícone
 
     private void drawPotionIcon(Potion potion, int x, int y) {
         int iconIndex = potion.getStatusIconIndex();
@@ -165,9 +173,6 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         GlStateManager.disableBlend();
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-
     private String getPotionName(PotionEffect effect, int id) {
         String base = POTION_NAMES.getOrDefault(id, "Effect " + id);
         int amp = effect.getAmplifier();
@@ -179,10 +184,6 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         for (PotionEffect e : effects) effectFilter.putIfAbsent(e.getPotionID(), true);
     }
 
-    /**
-     * Opções estáticas (alinhamento) ficam sempre no topo.
-     * Opções dinâmicas (toggle por efeito) ficam abaixo.
-     */
     private void rebuildStaticOptions() {
         options.clear();
         options.add(alignOption);
@@ -192,7 +193,6 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         Set<Integer> activeIds = new HashSet<>();
         for (PotionEffect e : effects) activeIds.add(e.getPotionID());
 
-        // Coleta ids já presentes nas opções dinâmicas
         Set<Integer> optionIds = new HashSet<>();
         for (ModuleOption<?> opt : options)
             if (opt instanceof EffectToggleOption)
@@ -200,7 +200,6 @@ public class StatusEffectModule extends BaseModule implements Configurable {
 
         if (optionIds.equals(activeIds)) return;
 
-        // Remove antigas opções dinâmicas, mantém estáticas
         options.removeIf(o -> o instanceof EffectToggleOption);
 
         for (PotionEffect effect : effects) {
@@ -221,16 +220,7 @@ public class StatusEffectModule extends BaseModule implements Configurable {
         return (n >= 1 && n <= 10) ? r[n] : String.valueOf(n);
     }
 
-    // -------------------------------------------------------------------------
-    // Getters/Setters para HudLayoutScreen
-
-    public int getHudX() { return hudX; }
-    public int getHudY() { return hudY; }
-    public void setHudPos(int x, int y) { this.hudX = x; this.hudY = y; }
-
-    // -------------------------------------------------------------------------
-    // Config
-
+    @Override
     public void saveConfig() {
         JsonObject obj = new JsonObject();
         obj.addProperty("x", hudX);
@@ -257,9 +247,6 @@ public class StatusEffectModule extends BaseModule implements Configurable {
                 catch (NumberFormatException ignored) {}
     }
 
-    // -------------------------------------------------------------------------
-    // AlignmentOption — aparece no ClickGUI como "Icon Side: LEFT / RIGHT"
-
     private class AlignmentOption extends ModuleOption<Boolean> {
         AlignmentOption() { super("Icon Side", iconRight); }
 
@@ -274,9 +261,6 @@ public class StatusEffectModule extends BaseModule implements Configurable {
 
         @Override public String getDisplayValue() { return iconRight ? "RIGHT" : "LEFT"; }
     }
-
-    // -------------------------------------------------------------------------
-    // EffectToggleOption
 
     private class EffectToggleOption extends ModuleOption<Boolean> {
         final int potionId;

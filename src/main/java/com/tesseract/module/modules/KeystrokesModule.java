@@ -5,6 +5,7 @@ import com.tesseract.Tesseract;
 import com.tesseract.event.EventHandler;
 import com.tesseract.event.events.EventRender2D;
 import com.tesseract.module.BaseModule;
+import com.tesseract.module.HudComponent;
 import com.tesseract.module.config.Configurable;
 import com.tesseract.module.config.CycleOption;
 import com.tesseract.module.config.FloatOption;
@@ -17,7 +18,7 @@ import org.lwjgl.input.Mouse;
 import java.util.Arrays;
 import java.util.List;
 
-public class KeystrokesModule extends BaseModule implements Configurable {
+public class KeystrokesModule extends BaseModule implements Configurable, HudComponent {
 
     public enum KeyColor {
         AZUL_COSMICO, VERDE, VERMELHO, ROXO, AMARELO, BRANCO
@@ -32,6 +33,10 @@ public class KeystrokesModule extends BaseModule implements Configurable {
     private final FloatOption           optScale;
     private final CycleOption<KeyColor> optColor;
     private final List<ModuleOption<?>> options;
+
+    private int hudX = 0;
+    private int hudY = 0;
+    private boolean hudPosInitialized = false;
 
     public KeystrokesModule() {
         super("Keystrokes", "Exibe WASD e cliques do mouse.", Category.MODS);
@@ -48,44 +53,77 @@ public class KeystrokesModule extends BaseModule implements Configurable {
     @Override public void onOptionChanged() { saveConfig(); }
 
     // -------------------------------------------------------------------------
+    // HudComponent
+
+    @Override public int    getHudX()      { return hudX; }
+    @Override public int    getHudY()      { return hudY; }
+    @Override public String getHudLabel()  { return "Keystrokes"; }
+
+    @Override
+    public int getHudWidth() {
+        float scale = optScale.getValue();
+        int ks = (int)(KEY_SIZE * scale);
+        int kg = (int)(KEY_GAP  * scale);
+        return ks * 3 + kg * 2;
+    }
+
+    @Override
+    public int getHudHeight() {
+        float scale = optScale.getValue();
+        int ks = (int)(KEY_SIZE * scale);
+        int kg = (int)(KEY_GAP  * scale);
+        return ks * 4 + kg * 3;
+    }
+
+    @Override
+    public void setHudPos(int x, int y) {
+        this.hudX = x;
+        this.hudY = y;
+    }
+
+    // -------------------------------------------------------------------------
+    // Render
 
     @EventHandler
     public void onRender(EventRender2D event) {
         if (mc.thePlayer == null) return;
 
-        ScaledResolution res   = event.getResolution();
-        float            scale = optScale.getValue();
+        // Inicializa posição padrão (canto inferior direito) na primeira vez
+        if (!hudPosInitialized) {
+            ScaledResolution res = event.getResolution();
+            hudX = res.getScaledWidth()  - getHudWidth()  - 4;
+            hudY = res.getScaledHeight() - getHudHeight() - 30;
+            hudPosInitialized = true;
+        }
 
+        handleHudDrag(this, event.getResolution());
+
+        float scale = optScale.getValue();
         int ks = (int)(KEY_SIZE * scale);
         int kg = (int)(KEY_GAP  * scale);
-
-        int totalW = ks * 3 + kg * 2;
-        int totalH = ks * 4 + kg * 3;
-
-        int baseX = res.getScaledWidth()  - totalW - 4;
-        int baseY = res.getScaledHeight() - totalH - 30;
+        int totalW = getHudWidth();
 
         KeyBinding kw  = mc.gameSettings.keyBindForward;
         KeyBinding ka  = mc.gameSettings.keyBindLeft;
-        KeyBinding ks_ = mc.gameSettings.keyBindBack;
+        KeyBinding kss = mc.gameSettings.keyBindBack;
         KeyBinding kd  = mc.gameSettings.keyBindRight;
         KeyBinding ksp = mc.gameSettings.keyBindJump;
 
         // Linha 1 — W
-        drawKey("W", baseX + ks + kg, baseY, ks, kw.isKeyDown(), scale);
+        drawKey("W", hudX + ks + kg, hudY, ks, kw.isKeyDown(), scale);
 
         // Linha 2 — A S D
-        drawKey("A", baseX,               baseY + ks + kg, ks, ka.isKeyDown(),  scale);
-        drawKey("S", baseX + ks + kg,     baseY + ks + kg, ks, ks_.isKeyDown(), scale);
-        drawKey("D", baseX + ks*2 + kg*2, baseY + ks + kg, ks, kd.isKeyDown(),  scale);
+        drawKey("A", hudX,               hudY + ks + kg, ks, ka.isKeyDown(),  scale);
+        drawKey("S", hudX + ks + kg,     hudY + ks + kg, ks, kss.isKeyDown(), scale);
+        drawKey("D", hudX + ks*2 + kg*2, hudY + ks + kg, ks, kd.isKeyDown(),  scale);
 
-        // Linha 3 — SPACE (largura total)
-        drawKeyW("_", baseX, baseY + (ks + kg)*2, totalW, ks, ksp.isKeyDown(), scale);
+        // Linha 3 — SPACE
+        drawKeyW("_", hudX, hudY + (ks + kg)*2, totalW, ks, ksp.isKeyDown(), scale);
 
         // Linha 4 — LMB | RMB
         int half = (totalW - kg) / 2;
-        drawKeyW("LMB", baseX,            baseY + (ks + kg)*3, half, ks, Mouse.isButtonDown(0), scale);
-        drawKeyW("RMB", baseX + half + kg, baseY + (ks + kg)*3, half, ks, Mouse.isButtonDown(1), scale);
+        drawKeyW("LMB", hudX,             hudY + (ks + kg)*3, half, ks, Mouse.isButtonDown(0), scale);
+        drawKeyW("RMB", hudX + half + kg, hudY + (ks + kg)*3, half, ks, Mouse.isButtonDown(1), scale);
     }
 
     // -------------------------------------------------------------------------
@@ -113,9 +151,13 @@ public class KeystrokesModule extends BaseModule implements Configurable {
     }
 
     // -------------------------------------------------------------------------
+    // Config
 
+    @Override
     public void saveConfig() {
         JsonObject obj = new JsonObject();
+        obj.addProperty("x",     hudX);
+        obj.addProperty("y",     hudY);
         obj.addProperty("scale", optScale.getValue());
         obj.addProperty("color", optColor.getValue().name());
         Tesseract.instance().getConfigManager().setSection("Keystrokes", obj);
@@ -125,6 +167,8 @@ public class KeystrokesModule extends BaseModule implements Configurable {
     private void loadConfig() {
         JsonObject obj = Tesseract.instance().getConfigManager().getSection("Keystrokes");
         if (obj == null) return;
+        if (obj.has("x"))     { hudX = obj.get("x").getAsInt(); hudPosInitialized = true; }
+        if (obj.has("y"))     { hudY = obj.get("y").getAsInt(); }
         if (obj.has("scale")) optScale.setValue(obj.get("scale").getAsFloat());
         if (obj.has("color")) optColor.setValue(KeyColor.valueOf(obj.get("color").getAsString()));
     }

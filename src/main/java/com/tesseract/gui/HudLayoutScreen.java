@@ -2,8 +2,7 @@ package com.tesseract.gui;
 
 import com.tesseract.Tesseract;
 import com.tesseract.module.BaseModule;
-import com.tesseract.module.modules.DamageIndicatorModule;
-import com.tesseract.module.modules.StatusEffectModule;
+import com.tesseract.module.HudComponent;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import org.lwjgl.input.Keyboard;
@@ -15,26 +14,16 @@ import java.util.List;
 public class HudLayoutScreen extends GuiScreen {
 
     private static class HudHandle {
-        String label;
-        int x, y, w, h;
+        HudComponent module;
         boolean dragging;
         int dragOffX, dragOffY;
-        Runnable onMove;
 
-        HudHandle(String label, int x, int y, int w, int h, Runnable onMove) {
-            this.label  = label;
-            this.x      = x;
-            this.y      = y;
-            this.w      = w;
-            this.h      = h;
-            this.onMove = onMove;
+        HudHandle(HudComponent module) {
+            this.module = module;
         }
     }
 
     private final List<HudHandle> handles = new ArrayList<>();
-
-    private DamageIndicatorModule damageIndicator;
-    private StatusEffectModule    statusEffect;
 
     private static final int COLOR_BG_OVERLAY  = 0xAA0A111E;
     private static final int COLOR_HANDLE_BG   = 0xCC0D1A28;
@@ -44,54 +33,16 @@ public class HudLayoutScreen extends GuiScreen {
     private static final int COLOR_HINT        = 0x8885B7EB;
     private static final int COLOR_HOVER       = 0x33378ADD;
 
-    // -------------------------------------------------------------------------
-
     @Override
     public void initGui() {
         handles.clear();
-        damageIndicator = null;
-        statusEffect    = null;
 
         for (BaseModule m : Tesseract.instance().getModuleManager().getModules(BaseModule.Category.MODS)) {
-            if (m instanceof DamageIndicatorModule && m.isEnabled()) {
-                damageIndicator = (DamageIndicatorModule) m;
+            if (m instanceof HudComponent && m.isEnabled()) {
+                handles.add(new HudHandle((HudComponent) m));
             }
-            if (m instanceof StatusEffectModule && m.isEnabled()) {
-                statusEffect = (StatusEffectModule) m;
-            }
-        }
-
-        if (damageIndicator != null) {
-            final int W = 100, H = 28;
-            handles.add(new HudHandle(
-                    "Damage Indicator",
-                    damageIndicator.getHudX(),
-                    damageIndicator.getHudY(),
-                    W, H,
-                    () -> {
-                        HudHandle h = handleByLabel("Damage Indicator");
-                        if (h != null) damageIndicator.setHudPos(h.x, h.y);
-                    }
-            ));
-        }
-
-        if (statusEffect != null) {
-            final int W = 90, H = 40;
-            handles.add(new HudHandle(
-                    "Status Effects",
-                    statusEffect.getHudX(),
-                    statusEffect.getHudY(),
-                    W, H,
-                    () -> {
-                        HudHandle h = handleByLabel("Status Effects");
-                        if (h != null) statusEffect.setHudPos(h.x, h.y);
-                    }
-            ));
         }
     }
-
-    // -------------------------------------------------------------------------
-    // Render
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
@@ -118,34 +69,39 @@ public class HudLayoutScreen extends GuiScreen {
     }
 
     private void drawHandle(HudHandle h, int mouseX, int mouseY) {
-        boolean hovered = mouseX >= h.x && mouseX <= h.x + h.w
-                && mouseY >= h.y && mouseY <= h.y + h.h;
+        HudComponent m  = h.module;
+        int x  = m.getHudX();
+        int y  = m.getHudY();
+        int w  = m.getHudWidth();
+        int hh = m.getHudHeight();
 
-        Gui.drawRect(h.x, h.y, h.x + h.w, h.y + h.h,
+        boolean hovered = mouseX >= x && mouseX <= x + w
+                && mouseY >= y && mouseY <= y + hh;
+
+        Gui.drawRect(x, y, x + w, y + hh,
                 hovered || h.dragging ? COLOR_HOVER : COLOR_HANDLE_BG);
-        drawBorder(h.x, h.y, h.x + h.w, h.y + h.h, COLOR_HANDLE_BDR);
+        drawBorder(x, y, x + w, y + hh, COLOR_HANDLE_BDR);
 
-        int lw = mc.fontRendererObj.getStringWidth(h.label);
+        String label = m.getHudLabel();
+        int lw = mc.fontRendererObj.getStringWidth(label);
         mc.fontRendererObj.drawString(
-                h.label,
-                h.x + h.w / 2 - lw / 2,
-                h.y + h.h / 2 - 4,
+                label,
+                x + w / 2 - lw / 2,
+                y + hh / 2 - 4,
                 COLOR_HANDLE_TEXT
         );
     }
-
-    // -------------------------------------------------------------------------
-    // Mouse
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         if (mouseButton == 0) {
             for (HudHandle h : handles) {
-                if (mouseX >= h.x && mouseX <= h.x + h.w
-                        && mouseY >= h.y && mouseY <= h.y + h.h) {
+                HudComponent m = h.module;
+                if (mouseX >= m.getHudX() && mouseX <= m.getHudX() + m.getHudWidth()
+                        && mouseY >= m.getHudY() && mouseY <= m.getHudY() + m.getHudHeight()) {
                     h.dragging = true;
-                    h.dragOffX = mouseX - h.x;
-                    h.dragOffY = mouseY - h.y;
+                    h.dragOffX = mouseX - m.getHudX();
+                    h.dragOffY = mouseY - m.getHudY();
                     return;
                 }
             }
@@ -158,7 +114,7 @@ public class HudLayoutScreen extends GuiScreen {
         for (HudHandle h : handles) {
             if (h.dragging) {
                 h.dragging = false;
-                h.onMove.run();
+                h.module.saveConfig();
             }
         }
         super.mouseReleased(mouseX, mouseY, state);
@@ -168,16 +124,14 @@ public class HudLayoutScreen extends GuiScreen {
     protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
         for (HudHandle h : handles) {
             if (h.dragging) {
-                h.x = Math.max(0, Math.min(mouseX - h.dragOffX, width  - h.w));
-                h.y = Math.max(0, Math.min(mouseY - h.dragOffY, height - h.h));
-                h.onMove.run();
+                HudComponent m = h.module;
+                int nx = Math.max(0, Math.min(mouseX - h.dragOffX, width  - m.getHudWidth()));
+                int ny = Math.max(0, Math.min(mouseY - h.dragOffY, height - m.getHudHeight()));
+                m.setHudPos(nx, ny);
             }
         }
         super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
     }
-
-    // -------------------------------------------------------------------------
-    // Teclado
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
@@ -188,16 +142,8 @@ public class HudLayoutScreen extends GuiScreen {
         }
     }
 
-    // -------------------------------------------------------------------------
-
     private void saveAll() {
-        if (damageIndicator != null) damageIndicator.saveConfig();
-        if (statusEffect    != null) statusEffect.saveConfig();
-    }
-
-    private HudHandle handleByLabel(String label) {
-        for (HudHandle h : handles) if (h.label.equals(label)) return h;
-        return null;
+        for (HudHandle h : handles) h.module.saveConfig();
     }
 
     @Override

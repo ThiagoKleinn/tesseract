@@ -5,19 +5,18 @@ import com.tesseract.Tesseract;
 import com.tesseract.event.EventHandler;
 import com.tesseract.event.events.EventRender2D;
 import com.tesseract.module.BaseModule;
+import com.tesseract.module.HudComponent;
 import com.tesseract.module.config.Configurable;
 import com.tesseract.module.config.ModuleOption;
 import com.tesseract.util.RenderUtil;
-import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
-import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 import java.util.Collections;
 import java.util.List;
 
-public class DamageIndicatorModule extends BaseModule implements Configurable {
+public class DamageIndicatorModule extends BaseModule implements Configurable, HudComponent {
 
     private static final int W   = 100;
     private static final int H   = 28;
@@ -29,11 +28,6 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
     private int hudX = 10;
     private int hudY = 10;
 
-    private boolean dragging   = false;
-    private int     dragOffX   = 0;
-    private int     dragOffY   = 0;
-    private boolean rmbWasDown = false;
-
     public DamageIndicatorModule() {
         super("DamageIndicator", "Exibe vida e nome do alvo.", Category.MODS);
         loadConfig();
@@ -42,36 +36,33 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
     @Override public List<ModuleOption<?>> getOptions() { return Collections.emptyList(); }
     @Override public void onOptionChanged() {}
 
-    // -------------------------------------------------------------------------
-    // Getters/Setters para o HudLayoutScreen
+    @Override public int    getHudX()      { return hudX; }
+    @Override public int    getHudY()      { return hudY; }
+    @Override public int    getHudWidth()  { return W; }
+    @Override public int    getHudHeight() { return H; }
+    @Override public String getHudLabel()  { return "Damage Indicator"; }
 
-    public int getHudX() { return hudX; }
-    public int getHudY() { return hudY; }
-
+    @Override
     public void setHudPos(int x, int y) {
         this.hudX = x;
         this.hudY = y;
     }
 
-    // -------------------------------------------------------------------------
-
     @EventHandler
     public void onRender(EventRender2D event) {
         if (mc.thePlayer == null || mc.theWorld == null) return;
 
-        handleDrag(event.getResolution());
+        handleHudDrag(this, event.getResolution());
 
         EntityLivingBase target = getTarget();
         if (target == null) return;
-
-        int x = hudX, y = hudY;
 
         String name  = getTargetName(target);
         int    hpCur = (int) target.getHealth();
         int    hpMax = (int) target.getMaxHealth();
 
         // Linha 1 — nome
-        RenderUtil.drawStringWithShadow("[" + name + "]", x + PAD, y + PAD, COLOR_NAME);
+        RenderUtil.drawStringWithShadow("[" + name + "]", hudX + PAD, hudY + PAD, COLOR_NAME);
 
         // Linha 2 — vida
         String hpCurNum = String.valueOf(hpCur);
@@ -79,8 +70,8 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
         String slash    = "/";
         String hpMaxNum = String.valueOf(hpMax);
 
-        float cx           = x + PAD;
-        float lineY        = y + PAD + mc.fontRendererObj.FONT_HEIGHT + 2;
+        float cx           = hudX + PAD;
+        float lineY        = hudY + PAD + mc.fontRendererObj.FONT_HEIGHT + 2;
         float scaleX       = 1.8f;
         float scaleY       = 1.5f;
         float heartOffsetY = lineY - (mc.fontRendererObj.FONT_HEIGHT / 2f) * (scaleY - 1f) - 1.2f;
@@ -114,38 +105,6 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
         GL11.glPopMatrix();
     }
 
-    private void handleDrag(ScaledResolution res) {
-        int sw     = res.getScaledWidth();
-        int sh     = res.getScaledHeight();
-        int mouseX = (int)(Mouse.getX() * sw  / (double) mc.displayWidth);
-        int mouseY = (int)((mc.displayHeight - Mouse.getY() - 1) * sh / (double) mc.displayHeight);
-
-        boolean rmb = Mouse.isButtonDown(1);
-
-        if (rmb && !rmbWasDown) {
-            if (mouseX >= hudX && mouseX <= hudX + W
-                    && mouseY >= hudY && mouseY <= hudY + H) {
-                dragging = true;
-                dragOffX = mouseX - hudX;
-                dragOffY = mouseY - hudY;
-            }
-        }
-
-        if (!rmb && rmbWasDown && dragging) {
-            dragging = false;
-            saveConfig();
-        }
-
-        if (dragging && rmb) {
-            hudX = mouseX - dragOffX;
-            hudY = mouseY - dragOffY;
-            hudX = Math.max(0, Math.min(hudX, sw - W));
-            hudY = Math.max(0, Math.min(hudY, sh - H));
-        }
-
-        rmbWasDown = rmb;
-    }
-
     private EntityLivingBase getTarget() {
         if (mc.pointedEntity instanceof EntityLivingBase) {
             return (EntityLivingBase) mc.pointedEntity;
@@ -171,6 +130,7 @@ public class DamageIndicatorModule extends BaseModule implements Configurable {
         return raw.isEmpty() ? raw : Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
     }
 
+    @Override
     public void saveConfig() {
         JsonObject obj = new JsonObject();
         obj.addProperty("x", hudX);

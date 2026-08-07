@@ -2,6 +2,8 @@ package com.tesseract.module;
 
 import com.tesseract.Tesseract;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ScaledResolution;
+import org.lwjgl.input.Mouse;
 
 public abstract class BaseModule {
 
@@ -29,6 +31,12 @@ public abstract class BaseModule {
 
     // keybind bug
     public boolean isToggleByKey() { return true; }
+
+    // hud layout drag
+    private boolean hudDragging = false;
+    private int hudDragOffX = 0;
+    private int hudDragOffY = 0;
+    private boolean hudRmbWasDown = false;
 
     // -------------------------------------------------------------------------
 
@@ -103,6 +111,37 @@ public abstract class BaseModule {
         setKeybind(keyCode);
         listeningForKey = false;
         bindPanelOpen   = false;
+    }
+
+    protected void handleHudDrag(HudComponent hud, ScaledResolution res) {
+        int sw = res.getScaledWidth();
+        int sh = res.getScaledHeight();
+        int mouseX = (int)(Mouse.getX() * sw  / (double) mc.displayWidth);
+        int mouseY = (int)((mc.displayHeight - Mouse.getY() - 1) * sh / (double) mc.displayHeight);
+
+        boolean rmb = Mouse.isButtonDown(1);
+
+        if (rmb && !hudRmbWasDown) {
+            if (mouseX >= hud.getHudX() && mouseX <= hud.getHudX() + hud.getHudWidth()
+                    && mouseY >= hud.getHudY() && mouseY <= hud.getHudY() + hud.getHudHeight()) {
+                hudDragging = true;
+                hudDragOffX = mouseX - hud.getHudX();
+                hudDragOffY = mouseY - hud.getHudY();
+            }
+        }
+
+        if (!rmb && hudRmbWasDown && hudDragging) {
+            hudDragging = false;
+            hud.saveConfig();
+        }
+
+        if (hudDragging && rmb) {
+            int nx = Math.max(0, Math.min(mouseX - hudDragOffX, sw - hud.getHudWidth()));
+            int ny = Math.max(0, Math.min(mouseY - hudDragOffY, sh - hud.getHudHeight()));
+            hud.setHudPos(nx, ny);
+        }
+
+        hudRmbWasDown = rmb;
     }
 
     // -------------------------------------------------------------------------
