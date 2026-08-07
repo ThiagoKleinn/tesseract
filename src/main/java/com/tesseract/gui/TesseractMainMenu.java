@@ -13,20 +13,12 @@ import java.util.Random;
 
 public class TesseractMainMenu extends GuiScreen {
 
-    // =========================================================================
-    // Animação do Tesseract GIF (32 frames em resources/textures/gui/tesseract/)
-    // =========================================================================
-
     private static final int   CUBE_FRAME_COUNT = 32;
     private static final float CUBE_FPS         = 20f;   // velocidade da animação
     private static final int   CUBE_SIZE        = 80;    // tamanho em pixels na tela
 
     private final ResourceLocation[] cubeFrames = new ResourceLocation[CUBE_FRAME_COUNT];
     private long animStartTime;
-
-    // =========================================================================
-    // Fundo / partículas
-    // =========================================================================
 
     private float tick = 0f;
 
@@ -45,10 +37,6 @@ public class TesseractMainMenu extends GuiScreen {
     private final float[] partAlpha  = new float[PART_COUNT];
     private final float[] partSize   = new float[PART_COUNT];
 
-    // =========================================================================
-    // Botões
-    // =========================================================================
-
     private static final String[] BTN_LABELS = {
             "SINGLEPLAYER", "MULTIPLAYER", "OPTIONS", "ALT MANAGER", "QUIT"
     };
@@ -60,16 +48,7 @@ public class TesseractMainMenu extends GuiScreen {
 
     private AltAccountManager altManager;
 
-    // =========================================================================
-    // Construtor
-    // =========================================================================
-
     public TesseractMainMenu() {
-        // --- Pré-carrega ResourceLocations dos frames ---
-        // Coloque os PNGs em:
-        //   src/main/resources/assets/tesseract/textures/gui/tesseract/frame_00.png
-        //   src/main/resources/assets/tesseract/textures/gui/tesseract/frame_01.png
-        //   ... até frame_31.png
         for (int i = 0; i < CUBE_FRAME_COUNT; i++) {
             cubeFrames[i] = new ResourceLocation(
                     "tesseract", String.format("textures/gui/tesseract/frame_%02d.png", i)
@@ -115,7 +94,7 @@ public class TesseractMainMenu extends GuiScreen {
 
     private int currentCubeFrame() {
         long elapsed = System.currentTimeMillis() - animStartTime;
-        long frameDuration = (long)(1000f / CUBE_FPS);
+        long frameDuration = (long)(1000f / CUBE_FPS);   // ms por frame
         return (int)((elapsed / frameDuration) % CUBE_FRAME_COUNT);
     }
 
@@ -212,6 +191,7 @@ public class TesseractMainMenu extends GuiScreen {
                     (a << 24) | 0x85B7EB);
         }
     }
+
 
     private void drawTitle() {
         String line1 = "TESSERACT";
@@ -356,7 +336,6 @@ public class TesseractMainMenu extends GuiScreen {
     protected void keyTyped(char typedChar, int keyCode) throws IOException {}
 
     @Override public boolean doesGuiPauseGame() { return false; }
-
 
     private void drawBorder(int x1, int y1, int x2, int y2, int color) {
         drawRect(x1,     y1,     x2,     y1 + 1, color);
