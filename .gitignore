@@ -9,3 +9,14 @@ out/
 
 # Misc
 tesseract/accounts.json
+
+# Run directory (client de teste)
+run/
+!run/mods/
+!run/config/
+
+# Logs
+*.log
+
+# Relatórios de mixin
+mixin_implementation_report.*
