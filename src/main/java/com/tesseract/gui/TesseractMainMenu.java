@@ -4,14 +4,29 @@ import com.tesseract.altmanager.AltAccountManager;
 import com.tesseract.altmanager.AltManagerScreen;
 import net.minecraft.client.gui.*;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.util.ResourceLocation;
+import org.lwjgl.opengl.GL11;
 
 import java.io.IOException;
 import java.util.Random;
 
 public class TesseractMainMenu extends GuiScreen {
 
-    // -------------------------------------------------------------------------
-    // Animação
+    // =========================================================================
+    // Animação do Tesseract GIF (32 frames em resources/textures/gui/tesseract/)
+    // =========================================================================
+
+    private static final int   CUBE_FRAME_COUNT = 32;
+    private static final float CUBE_FPS         = 20f;   // velocidade da animação
+    private static final int   CUBE_SIZE        = 80;    // tamanho em pixels na tela
+
+    private final ResourceLocation[] cubeFrames = new ResourceLocation[CUBE_FRAME_COUNT];
+    private long animStartTime;
+
+    // =========================================================================
+    // Fundo / partículas
+    // =========================================================================
 
     private float tick = 0f;
 
@@ -30,8 +45,9 @@ public class TesseractMainMenu extends GuiScreen {
     private final float[] partAlpha  = new float[PART_COUNT];
     private final float[] partSize   = new float[PART_COUNT];
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
     // Botões
+    // =========================================================================
 
     private static final String[] BTN_LABELS = {
             "SINGLEPLAYER", "MULTIPLAYER", "OPTIONS", "ALT MANAGER", "QUIT"
@@ -42,13 +58,26 @@ public class TesseractMainMenu extends GuiScreen {
 
     private final float[] btnHoverAnim = new float[BTN_LABELS.length];
 
-    // -------------------------------------------------------------------------
-
     private AltAccountManager altManager;
 
-    // -------------------------------------------------------------------------
+    // =========================================================================
+    // Construtor
+    // =========================================================================
 
     public TesseractMainMenu() {
+        // --- Pré-carrega ResourceLocations dos frames ---
+        // Coloque os PNGs em:
+        //   src/main/resources/assets/tesseract/textures/gui/tesseract/frame_00.png
+        //   src/main/resources/assets/tesseract/textures/gui/tesseract/frame_01.png
+        //   ... até frame_31.png
+        for (int i = 0; i < CUBE_FRAME_COUNT; i++) {
+            cubeFrames[i] = new ResourceLocation(
+                    "tesseract", String.format("textures/gui/tesseract/frame_%02d.png", i)
+            );
+        }
+
+        animStartTime = System.currentTimeMillis();
+
         Random rng = new Random(0xC05B1CL);
         for (int i = 0; i < STAR_COUNT; i++) {
             starX[i]     = rng.nextInt(1000);
@@ -57,6 +86,7 @@ public class TesseractMainMenu extends GuiScreen {
             starSpeed[i] = 0.1f + rng.nextFloat() * 0.3f;
             starAlpha[i] = 0.3f + rng.nextFloat() * 0.7f;
         }
+
         Random prng = new Random(0xDEADBEEFL);
         for (int i = 0; i < PART_COUNT; i++) {
             partX[i]      = prng.nextFloat() * 1000f;
@@ -66,11 +96,9 @@ public class TesseractMainMenu extends GuiScreen {
             partAlpha[i]  = 0.2f + prng.nextFloat() * 0.4f;
             partSize[i]   = 1f + prng.nextFloat() * 2f;
         }
+
         altManager = new AltAccountManager();
     }
-
-    // -------------------------------------------------------------------------
-    // Render
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
@@ -85,8 +113,25 @@ public class TesseractMainMenu extends GuiScreen {
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
-    // -------------------------------------------------------------------------
-    // Fundo
+    private int currentCubeFrame() {
+        long elapsed = System.currentTimeMillis() - animStartTime;
+        long frameDuration = (long)(1000f / CUBE_FPS);
+        return (int)((elapsed / frameDuration) % CUBE_FRAME_COUNT);
+    }
+
+    private void drawCube(int x, int y, int side) {
+        int frame = currentCubeFrame();
+
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GlStateManager.enableAlpha();
+        GlStateManager.color(1f, 1f, 1f, 1f);  // sem tinting extra
+
+        mc.getTextureManager().bindTexture(cubeFrames[frame]);
+        drawModalRectWithCustomSizedTexture(x, y, 0, 0, side, side, side, side);
+
+        GlStateManager.disableBlend();
+    }
 
     static void drawCosmicBg(GuiScreen gui) {
         int rows = gui.height;
@@ -99,12 +144,7 @@ public class TesseractMainMenu extends GuiScreen {
         }
     }
 
-    private void drawCosmicBackground() {
-        drawCosmicBg(this);
-    }
-
-    // -------------------------------------------------------------------------
-    // Aurora
+    private void drawCosmicBackground() { drawCosmicBg(this); }
 
     private void drawAurora() {
         GlStateManager.enableBlend();
@@ -146,9 +186,6 @@ public class TesseractMainMenu extends GuiScreen {
         drawAuroraWaveStatic(this, tick, baseColor, amplitude, phaseOffset, alpha);
     }
 
-    // -------------------------------------------------------------------------
-    // Estrelas
-
     private void drawStars() {
         for (int i = 0; i < STAR_COUNT; i++) {
             int sx = starX[i] * width  / 1000;
@@ -159,9 +196,6 @@ public class TesseractMainMenu extends GuiScreen {
             drawRect(sx, sy, sx + sz, sy + sz, (a << 24) | 0x7BA7D4);
         }
     }
-
-    // -------------------------------------------------------------------------
-    // Partículas
 
     private void drawParticles() {
         for (int i = 0; i < PART_COUNT; i++) {
@@ -179,34 +213,37 @@ public class TesseractMainMenu extends GuiScreen {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Título — letras grandes estilo Minecraft via GL scale, sem glow box
-
     private void drawTitle() {
         String line1 = "TESSERACT";
         String line2 = "Client";
-        float  scale = 3.0f; // letras grandes
+        float  scale  = 3.0f;
+        float  scale2 = 1.5f;
 
         float glowPulse = (float)(Math.sin(tick * 2) * 0.15 + 0.85);
 
-        // Mede largura escalada
-        int rawW1 = mc.fontRendererObj.getStringWidth(line1);
-        int rawW2 = mc.fontRendererObj.getStringWidth(line2);
+        int rawW1    = mc.fontRendererObj.getStringWidth(line1);
+        int rawW2    = mc.fontRendererObj.getStringWidth(line2);
         int scaledW1 = (int)(rawW1 * scale);
+        int scaledW2 = (int)(rawW2 * scale2);
 
-        int ty1 = height / 4 - 16;
-        int ty2 = ty1 + (int)(mc.fontRendererObj.FONT_HEIGHT * scale) + 4;
+        int gap = 12;
+        int totalW = scaledW1 + gap + CUBE_SIZE;
+        int blockX = width / 2 - totalW / 2;
 
-        // --- TESSERACT ---
-        // Sombra
+        int ty1  = height / 4 - 16;
+        int fontH = (int)(mc.fontRendererObj.FONT_HEIGHT * scale);
+        int cubeY = ty1 + fontH / 2 - CUBE_SIZE / 2;
+
+        int textX = blockX;
+        int cubeX = blockX + scaledW1 + gap;
+
         GlStateManager.pushMatrix();
-        GlStateManager.translate(width / 2f - scaledW1 / 2f + 2, ty1 + 2, 0);
+        GlStateManager.translate(textX + 2, ty1 + 2, 0);
         GlStateManager.scale(scale, scale, 1f);
         mc.fontRendererObj.drawString(line1, 0, 0, 0x22378ADD);
         GlStateManager.popMatrix();
 
-        // Texto principal com gradiente letra por letra
-        float cx = width / 2f - scaledW1 / 2f;
+        float cx = textX;
         for (int ci = 0; ci < line1.length(); ci++) {
             String ch = String.valueOf(line1.charAt(ci));
             float  t  = (float) ci / (line1.length() - 1);
@@ -224,9 +261,8 @@ public class TesseractMainMenu extends GuiScreen {
             cx += mc.fontRendererObj.getStringWidth(ch) * scale;
         }
 
-        // Sublinha animada
-        int lineY  = ty1 + (int)(mc.fontRendererObj.FONT_HEIGHT * scale) + 2;
-        int lineX0 = width / 2 - scaledW1 / 2;
+        int lineY  = ty1 + fontH + 2;
+        int lineX0 = textX;
         for (int lx = lineX0; lx < lineX0 + scaledW1; lx++) {
             float t     = (float)(lx - lineX0) / scaledW1;
             float alpha = (float)(Math.sin(t * Math.PI) * glowPulse);
@@ -234,18 +270,14 @@ public class TesseractMainMenu extends GuiScreen {
             drawRect(lx, lineY, lx + 1, lineY + 1, (la << 24) | 0x85B7EB);
         }
 
-        // --- Client (menor, sutil) ---
-        float scale2   = 1.5f;
-        int   scaledW2 = (int)(rawW2 * scale2);
+        drawCube(cubeX, cubeY, CUBE_SIZE);
+
         GlStateManager.pushMatrix();
-        GlStateManager.translate(width / 2f - scaledW2 / 2f, lineY + 4, 0);
+        GlStateManager.translate(textX + scaledW1 / 2f - scaledW2 / 2f, lineY + 4, 0);
         GlStateManager.scale(scale2, scale2, 1f);
         mc.fontRendererObj.drawString(line2, 0, 0, 0x778899BB);
         GlStateManager.popMatrix();
     }
-
-    // -------------------------------------------------------------------------
-    // Botões
 
     private void drawButtons(int mouseX, int mouseY) {
         int totalH = BTN_LABELS.length * (BTN_H + BTN_GAP) - BTN_GAP;
@@ -258,7 +290,7 @@ public class TesseractMainMenu extends GuiScreen {
                     && mouseY >= by && mouseY <= by + BTN_H;
 
             if (hov) btnHoverAnim[i] = Math.min(1f, btnHoverAnim[i] + 0.1f);
-            else      btnHoverAnim[i] = Math.max(0f, btnHoverAnim[i] - 0.07f);
+            else     btnHoverAnim[i] = Math.max(0f, btnHoverAnim[i] - 0.07f);
 
             float ha = btnHoverAnim[i];
 
@@ -291,9 +323,6 @@ public class TesseractMainMenu extends GuiScreen {
         mc.fontRendererObj.drawString(user, width - uw - 20, height - 10, 0x4485B7EB);
     }
 
-    // -------------------------------------------------------------------------
-    // Mouse
-
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
         if (mouseButton != 0) { super.mouseClicked(mouseX, mouseY, mouseButton); return; }
@@ -315,11 +344,11 @@ public class TesseractMainMenu extends GuiScreen {
 
     private void onButtonClick(int index) {
         switch (index) {
-            case 0: mc.displayGuiScreen(new TesseractWorldSelect(this));      break;
-            case 1: mc.displayGuiScreen(new TesseractMultiplayer(this));      break;
-            case 2: mc.displayGuiScreen(new TesseractOptions(this));          break;
+            case 0: mc.displayGuiScreen(new TesseractWorldSelect(this));         break;
+            case 1: mc.displayGuiScreen(new TesseractMultiplayer(this));         break;
+            case 2: mc.displayGuiScreen(new TesseractOptions(this));             break;
             case 3: mc.displayGuiScreen(new AltManagerScreen(this, altManager)); break;
-            case 4: mc.shutdown();                                              break;
+            case 4: mc.shutdown();                                                break;
         }
     }
 
@@ -327,6 +356,7 @@ public class TesseractMainMenu extends GuiScreen {
     protected void keyTyped(char typedChar, int keyCode) throws IOException {}
 
     @Override public boolean doesGuiPauseGame() { return false; }
+
 
     private void drawBorder(int x1, int y1, int x2, int y2, int color) {
         drawRect(x1,     y1,     x2,     y1 + 1, color);
